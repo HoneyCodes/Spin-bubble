@@ -283,3 +283,29 @@ float3 colormap (float intensity)
     return (float3)(turbo_colormap[i]);
 }
 
+static inline uint rol32(const uint x, int k)
+{
+	return (x << k) | (x >> (32 - k));
+}
+
+unsigned long xoshiro128p(uint4* s)
+{
+	uint const result = (*s).x + (*s).w;
+	uint const t = (*s).y << 9;
+
+	(*s).z ^= (*s).x;
+	(*s).w ^= (*s).y;
+	(*s).y ^= (*s).z;
+	(*s).x ^= (*s).w;
+	(*s).z ^= t;
+	(*s).w = rol32((*s).w, 11);
+
+	return result;
+}
+
+float rand()
+{
+    float result;
+
+    result = frexp()
+}
