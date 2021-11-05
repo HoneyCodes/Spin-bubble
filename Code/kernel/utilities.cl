@@ -283,29 +283,33 @@ float3 colormap (float intensity)
     return (float3)(turbo_colormap[i]);
 }
 
-static inline uint rol32(const uint x, int k)
+static inline uint rotl(const uint x, int k)
 {
 	return (x << k) | (x >> (32 - k));
 }
 
-unsigned long xoshiro128p(uint4* s)
+// Blackman-Vigni xoshiro128++ 32-bit all-purpose flat distribution random generator, 128-bit state size.
+uint xoshiro128pp(uint4* state)
 {
-	uint const result = (*s).x + (*s).w;
-	uint const t = (*s).y << 9;
+	uint const random = rotl((*state).x + (*state).w, 7) + (*state).x;
+	uint const t = (*state).y << 9;
 
-	(*s).z ^= (*s).x;
-	(*s).w ^= (*s).y;
-	(*s).y ^= (*s).z;
-	(*s).x ^= (*s).w;
-	(*s).z ^= t;
-	(*s).w = rol32((*s).w, 11);
+	(*state).z ^= (*state).x;
+	(*state).w ^= (*state).y;
+	(*state).y ^= (*state).z;
+	(*state).x ^= (*state).w;
+	(*state).z ^= t;
+	(*state).w = rotl((*state).w, 11);
 
-	return result;
+	return random;
 }
 
-float rand()
+// 
+float uint_to_float(uint n, float min_value, float max_value)
 {
-    float result;
+    float value;
 
-    result = frexp()
+    value = (n/4294967295)*(max_value - min_value) + min_value;
+
+    return value;
 }
