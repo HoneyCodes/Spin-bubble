@@ -309,7 +309,7 @@ float uint_to_float(uint n, float min_value, float max_value)
 {
     float value;
 
-    value = (n/4294967295)*(max_value - min_value) + min_value;
+    value = (n/4294967295.0f)*(max_value - min_value) + min_value;
 
     return value;
 }
