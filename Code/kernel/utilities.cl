@@ -321,6 +321,7 @@ float metropolis (float p, float min_value, float max_value, uint4* state)
     float        x;
     float        x_trial;
     float        delta;
-    
-    x_trial = uint_to_float(xoshiro128pp(&state), min_value, max_value);
+
+    x = uint_to_float(xoshiro128pp(&state), min_value, max_value);
+    delta = uint_to_float(xoshiro128pp(&state), min_value, max_value);
 }
