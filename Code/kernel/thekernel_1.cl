@@ -27,6 +27,7 @@ __kernel void thekernel(__global float4*    color,                              
   float        L                 = 0.0f;                                        // Neighbour link length.
   float        dt                = dt_simulation[0];                            // Simulation time step [s].
   uint4        s                 = convert_uint4(state[n]);                     // Random generator state.
+  float4       c                 = color[n];                                    // Node color.
  
   // COMPUTING STRIDE MINIMUM INDEX:
   if (i == 0)
@@ -48,7 +49,9 @@ __kernel void thekernel(__global float4*    color,                              
   }
   //printf("n = %u\n", xoshiro128pp(&s));
   p.z = uint_to_float(xoshiro128pp(&s), -0.05f, +0.05f);                         // Setting z position...
-  //printf("f = %f\n", p.z);
+  printf("f = %f\n", p.z);
   state[n] = convert_int4(s);                                                   // Updating random generator state...
-  position[n] = p;                                                              // Updating position...
+  c.xyz = colormap(0.5f*(20.0f*p.z + 1.0f));
+  color[n] = c;
+  //position[n] = p;                                                              // Updating position...
 }
