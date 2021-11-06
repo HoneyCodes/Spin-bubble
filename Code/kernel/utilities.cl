@@ -283,6 +283,7 @@ float3 colormap (float intensity)
     return (float3)(turbo_colormap[i]);
 }
 
+// Blackman-Vigni xoshiro128++ 32-bit rotation function.
 static inline uint rotl(const uint x, int k)
 {
 	return (x << k) | (x >> (32 - k));
@@ -304,7 +305,7 @@ uint xoshiro128pp(uint4* state)
 	return random;
 }
 
-// 
+// "uint" to "float" conversion function.
 float uint_to_float(uint n, float min_value, float max_value)
 {
     float value;
@@ -312,4 +313,14 @@ float uint_to_float(uint n, float min_value, float max_value)
     value = (n/4294967295.0f)*(max_value - min_value) + min_value;
 
     return value;
+}
+
+// Metropolis generator.
+float metropolis (float p, float min_value, float max_value, uint4* state)
+{
+    float        x;
+    float        x_trial;
+    float        delta;
+    
+    x_trial = uint_to_float(xoshiro128pp(&state), min_value, max_value);
 }
