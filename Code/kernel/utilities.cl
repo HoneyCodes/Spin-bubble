@@ -315,13 +315,27 @@ float uint_to_float(uint n, float min_value, float max_value)
     return value;
 }
 
-// Metropolis generator.
-float metropolis (float p, float min_value, float max_value, uint4* state)
+// Rejection sampling random generator.
+float rejection (float(*distribution)(float x),
+                 float x_min,
+                 float x_max,
+                 float y_min,
+                 float y_max,
+                 uint4* state_x,
+                 uint4* state_y,
+                 uint max_iterations)
 {
-    float        x;
-    float        x_trial;
-    float        delta;
+    float        x_random;
+    float        y_random;
+    int          i = 0;
 
-    x = uint_to_float(xoshiro128pp(&state), min_value, max_value);
-    delta = uint_to_float(xoshiro128pp(&state), min_value, max_value);
+    do
+    {
+        x_random = uint_to_float(xoshiro128pp(state_x), x_min, x_max);
+        y_random = uint_to_float(xoshiro128pp(state_y), y_min, y_max);
+        i++;
+    }
+    while ((y_random > distribution(x_random)) && (i < max_iterations));
+
+    return x_random;
 }

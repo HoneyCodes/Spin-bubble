@@ -1,11 +1,22 @@
 /// @file
 
+// Probability distribution.
+float dist(float x)
+{
+  float y;
+  
+  y = sin(x);
+
+  return y;
+}
+
 __kernel void thekernel(__global float4*    color,                              // Color.
                         __global float4*    position,                           // Position.
                         __global int*       central,                            // Node.
                         __global int*       nearest,                            // Neighbour.
                         __global int*       offset,                             // Offset.
-                        __global int4*      state,                              // Random number generator state.     
+                        __global int4*      state_x,                            // Random number generator state.
+                        __global int4*      state_y,                            // Random number generator state.     
                         __global float*     dt_simulation)                      // Simulation time step.
 { 
   ////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +37,8 @@ __kernel void thekernel(__global float4*    color,                              
   float4       link              = (float4)(0.0f, 0.0f, 0.0f, 1.0f);            // Neighbour link.
   float        L                 = 0.0f;                                        // Neighbour link length.
   float        dt                = dt_simulation[0];                            // Simulation time step [s].
-  uint4        s                 = convert_uint4(state[n]);                     // Random generator state.
+  uint4        sx                = convert_uint4(state_x[n]);                   // Random generator state.
+  uint4        sy                = convert_uint4(state_y[n]);                   // Random generator state.
   float4       c                 = color[n];                                    // Node color.
  
   // COMPUTING STRIDE MINIMUM INDEX:
@@ -47,11 +59,12 @@ __kernel void thekernel(__global float4*    color,                              
     link = neighbour - p;                                                       // Getting neighbour link vector...
     L = length(link.xyz);                                                       // Computing neighbour link length...
   }
-  //printf("n = %u\n", xoshiro128pp(&s));
-  p.z = uint_to_float(xoshiro128pp(&s), -0.05f, +0.05f);                         // Setting z position...
-  printf("f = %f\n", p.z);
-  state[n] = convert_int4(s);                                                   // Updating random generator state...
-  c.xyz = colormap(0.5f*(20.0f*p.z + 1.0f));
-  color[n] = c;
-  //position[n] = p;                                                              // Updating position...
+  
+  //p.z = uint_to_float(xoshiro128pp(&sx), -0.05f, +0.05f);                     // Setting z position...
+  p.z = 0.1f*rejection (dist, 0.0f, M_PI_F, 0.0f, 1.0f, &sx, &sy, 1000);        // Setting z position...
+  state_x[n] = convert_int4(sx);                                                // Updating random generator state...
+  state_y[n] = convert_int4(sy);                                                // Updating random generator state...
+  c.xyz = colormap(0.5f*(20.0f*p.z + 1.0f));                                    // Setting color...
+  color[n] = c;                                                                 // Updating color...
+  position[n] = p;                                                              // Updating position...
 }
