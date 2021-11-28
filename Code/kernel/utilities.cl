@@ -316,24 +316,42 @@ float uint_to_float(uint n, float min_value, float max_value)
 }
 
 // Rejection sampling random generator.
-float rejection (float(*distribution)(float x),
-                 float x_min,
-                 float x_max,
+float rejection (float(*energy_central)(float Hx, float Hz, float sz_central),
+                 float(*energy_neighbour)(float C_radial, float sz_neighbour, float sz_central),
+                 float* sz,
+                 float Hx,
+                 float Hz,
+                 uint n,
+                 uint j_min,
+                 uint j_max,
+                 float sz_min,
+                 float sz_max,
                  float y_min,
                  float y_max,
                  uint4* state_x,
                  uint4* state_y,
                  uint max_iterations)
 {
-    float        x_random;
+    float        sz_random;
     float        y_random;
-    int          i = 0;
+    uint         i = 0;
+    uint         j;
+    uint         k;
+    float        energy;
 
     do
     {
-        x_random = uint_to_float(xoshiro128pp(state_x), x_min, x_max);
+        sz_random = uint_to_float(xoshiro128pp(state_x), sz_min, sz_max);
         y_random = uint_to_float(xoshiro128pp(state_y), y_min, y_max);
         i++;
+
+        energy = energy_central(Hx, Hz, sz_random);
+
+        for(j = j_min; j < j_max; j++)
+        {
+            k = j - j_min;
+            energy += energy_neighbour(C_radial, sz[k], sz[n]);
+        }
     }
     while ((y_random > distribution(x_random)) && (i < max_iterations));
 
