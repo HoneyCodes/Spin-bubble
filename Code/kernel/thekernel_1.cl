@@ -25,13 +25,13 @@ __kernel void thekernel(__global float4*    color,                              
                         __global int*       central,                            // Node.
                         __global int*       nearest,                            // Neighbour.
                         __global int*       offset,                             // Offset.
+                        __global float*     sz,                                 // z-component of the spin.  
                         __global int4*      state_sz,                           // Random number generator state.
-                        __global int4*      state_th,                           // Random number generator state.  
+                        __global int4*      state_th,                           // Random number generator state. 
+                        __global int*       max_rejections,                     // Maximum allowed number of rejections. 
                         __global float*     longitudinal_H,                     // Longitudinal magnetic field.
                         __global float*     transverse_H,                       // Transverse magnetic field.
-                        __global float*     sz,                                 // z-component of the spin.  
                         __global float*     temperature,                        // Temperature.
-                        __global int*       max_rejections,                     // Maximum allowed number of rejections.
                         __global float*     dt_simulation)                      // Simulation time step.
 { 
   ////////////////////////////////////////////////////////////////////////////////
