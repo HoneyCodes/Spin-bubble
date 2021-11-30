@@ -26,6 +26,7 @@
 #define HX_INIT       0.8f                                                                          // Longitudinal magnetic field.
 #define HZ_INIT       0.01f                                                                         // Transverse magnetic field.
 #define T_INIT        0.0125f                                                                       // Temperature.
+#define ALPHA_INIT    1.0f                                                                          // Radial exponent.
 
 #ifdef __linux__
   #define SHADER_HOME "../../Code/shader/"                                                          // Linux OpenGL shaders directory.
@@ -59,40 +60,42 @@ int main ()
   size_t                           j_max;                                                           // Index [#].
 
   // MOUSE PARAMETERS:
-  float                            ms_orbit_rate  = 1.0f;                                           // Orbit rotation rate [rev/s].
-  float                            ms_pan_rate    = 5.0f;                                           // Pan translation rate [m/s].
-  float                            ms_decaytime   = 1.25f;                                          // Pan LP filter decay time [s].
+  float                            ms_orbit_rate   = 1.0f;                                          // Orbit rotation rate [rev/s].
+  float                            ms_pan_rate     = 5.0f;                                          // Pan translation rate [m/s].
+  float                            ms_decaytime    = 1.25f;                                         // Pan LP filter decay time [s].
 
   // GAMEPAD PARAMETERS:
-  float                            gmp_orbit_rate = 1.0f;                                           // Orbit angular rate coefficient [rev/s].
-  float                            gmp_pan_rate   = 1.0f;                                           // Pan translation rate [m/s].
-  float                            gmp_decaytime  = 1.25f;                                          // Low pass filter decay time [s].
-  float                            gmp_deadzone   = 0.30f;                                          // Gamepad joystick deadzone [0...1].
+  float                            gmp_orbit_rate  = 1.0f;                                          // Orbit angular rate coefficient [rev/s].
+  float                            gmp_pan_rate    = 1.0f;                                          // Pan translation rate [m/s].
+  float                            gmp_decaytime   = 1.25f;                                         // Low pass filter decay time [s].
+  float                            gmp_deadzone    = 0.30f;                                         // Gamepad joystick deadzone [0...1].
 
   // OPENGL:
-  nu::opengl*                      gl             = new nu::opengl (NAME,SX,SY,OX,OY,PX,PY,PZ);     // OpenGL context.
-  nu::shader*                      S              = new nu::shader ();                              // OpenGL shader program.
-  nu::projection_mode              proj_mode      = nu::MONOCULAR;                                  // OpenGL projection mode.
+  nu::opengl*                      gl              = new nu::opengl (NAME,SX,SY,OX,OY,PX,PY,PZ);    // OpenGL context.
+  nu::shader*                      S               = new nu::shader ();                             // OpenGL shader program.
+  nu::projection_mode              proj_mode       = nu::MONOCULAR;                                 // OpenGL projection mode.
 
   // OPENCL:
-  nu::opencl*                      cl             = new nu::opencl (nu::GPU);                       // OpenCL context.
-  nu::kernel*                      K1             = new nu::kernel ();                              // OpenCL kernel array.
-  nu::float4*                      color          = new nu::float4 (0);                             // Color [].
-  nu::float4*                      position       = new nu::float4 (1);                             // Position [m].
-  nu::int1*                        central        = new nu::int1 (2);                               // Central nodes.
-  nu::int1*                        neighbour      = new nu::int1 (3);                               // Neighbour.
-  nu::int1*                        offset         = new nu::int1 (4);                               // Offset.
-  nu::float1*                      sz             = new nu::float1 (5);                             // z-component of the spin.
-  nu::int4*                        state_sz       = new nu::int4 (6);                               // Random generator state.
-  nu::int4*                        state_th       = new nu::int4 (7);                               // Random generator state.
-  nu::int1*                        max_rejections = new nu::int1 (8);                               // Maximum allowed number of rejections.
-  nu::float1*                      longitudinal_H = new nu::float1 (9);                             // Longitudinal magnetic field.
-  nu::float1*                      transverse_H   = new nu::float1 (10);                            // Transverse magnetic field.
-  nu::float1*                      temperature    = new nu::float1 (11);                            // Temperature.
-  nu::float1*                      dt             = new nu::float1 (12);                            // Time step [s].
+  nu::opencl*                      cl              = new nu::opencl (nu::GPU);                      // OpenCL context.
+  nu::kernel*                      K1              = new nu::kernel ();                             // OpenCL kernel array.
+  nu::float4*                      color           = new nu::float4 (0);                            // Color [].
+  nu::float4*                      position        = new nu::float4 (1);                            // Position [m].
+  nu::int1*                        central         = new nu::int1 (2);                              // Central nodes.
+  nu::int1*                        neighbour       = new nu::int1 (3);                              // Neighbour.
+  nu::int1*                        offset          = new nu::int1 (4);                              // Offset.
+  nu::float1*                      sz              = new nu::float1 (5);                            // z-component of the spin.
+  nu::int4*                        state_sz        = new nu::int4 (6);                              // Random generator state.
+  nu::int4*                        state_th        = new nu::int4 (7);                              // Random generator state.
+  nu::int1*                        max_rejections  = new nu::int1 (8);                              // Maximum allowed number of rejections.
+  nu::float1*                      longitudinal_H  = new nu::float1 (9);                            // Longitudinal magnetic field.
+  nu::float1*                      transverse_H    = new nu::float1 (10);                           // Transverse magnetic field.
+  nu::float1*                      temperature     = new nu::float1 (11);                           // Temperature.
+  nu::float1*                      radial_exponent = new nu::float1 (12);                           // Radial exponent.
+  nu::float1*                      ds              = new nu::float1 (13);                           // Mesh side.
+  nu::float1*                      dt              = new nu::float1 (14);                           // Time step [s].
 
   // MESH:
-  nu::mesh*                        vacuum         = new nu::mesh (MESH);                            // False vaccum domain.
+  nu::mesh*                        vacuum          = new nu::mesh (MESH);                           // False vaccum domain.
   size_t                           nodes;                                                           // Number of nodes.
   size_t                           elements;                                                        // Number of elements.
   size_t                           groups;                                                          // Number of groups.
@@ -114,6 +117,7 @@ int main ()
   float                            Hx    = HX_INIT;                                                 // Longitudinal magnetic field.
   float                            Hz    = HZ_INIT;                                                 // Transverse magnetic field.
   float                            T     = T_INIT;                                                  // Temperature.
+  float                            alpha = ALPHA_INIT;                                              // Radial exponent.
   float                            dt_simulation;                                                   // Simulation time step [s].
 
   // BACKUP:
@@ -199,6 +203,8 @@ int main ()
   temperature->data.push_back (T);                                                                  // Setting temperature...
   longitudinal_H->data.push_back (Hx);                                                              // Setting longitudinal magnetic field...
   transverse_H->data.push_back (Hz);                                                                // Setting transverse magnetic field...
+  radial_exponent->data.push_back (alpha);                                                          // Setting radial exponent...
+  ds->data.push_back (dx);                                                                          // Setting mesh side...
 
   // SETTING INITIAL DATA BACKUP:
   initial_position = position->data;                                                                // Setting backup data...
@@ -256,6 +262,14 @@ int main ()
     ImGui::InputFloat (" = T ", &T);                                                                // Adding input field...
 
     ImGui::PushStyleColor (ImGuiCol_Text, IM_COL32 (0,255,0,255));                                  // Setting text color...
+    ImGui::Text ("Radial exponent:                   ");                                            // Writing text...
+    ImGui::PopStyleColor ();                                                                        // Restoring text color...
+    ImGui::SameLine ();                                                                             // Staying on same line...
+    ImGui::Text ("[]  ");                                                                           // Writing text...
+    ImGui::SameLine ();                                                                             // Staying on same line...
+    ImGui::InputFloat (" = alpha ", &alpha);                                                        // Adding input field...
+
+    ImGui::PushStyleColor (ImGuiCol_Text, IM_COL32 (0,255,0,255));                                  // Setting text color...
     ImGui::Text ("Longitudinal magnetic field:       ");                                            // Writing text...
     ImGui::PopStyleColor ();                                                                        // Restoring text color...
     ImGui::SameLine ();                                                                             // Staying on same line...
@@ -274,10 +288,11 @@ int main ()
     if(ImGui::Button ("(U)pdate") || gl->key_U)
     {
       // UPDATING PHYSICAL PARAMETERS:
-      longitudinal_H->data[0] = Hx;                                                                 // Setting longitudinal magnetic field...
-      transverse_H->data[0]   = Hz;                                                                 // Setting transverse magnetic field...
-      temperature->data[0]    = T;                                                                  // Setting temperature...
-      dt->data[0]             = dt_simulation;                                                      // Setting simulation time step...
+      longitudinal_H->data[0]  = Hx;                                                                // Setting longitudinal magnetic field...
+      transverse_H->data[0]    = Hz;                                                                // Setting transverse magnetic field...
+      temperature->data[0]     = T;                                                                 // Setting temperature...
+      radial_exponent->data[0] = alpha;                                                             // Setting radial exponent...
+      dt->data[0]              = dt_simulation;                                                     // Setting simulation time step...
 
       // RESETTING NEUTRINO ARRAYS ("surface" depending):
       for(i = 0; i < nodes; i++)
@@ -308,6 +323,7 @@ int main ()
       cl->write (10);                                                                               // Writing OpenCL data...
       cl->write (11);                                                                               // Writing OpenCL data...
       cl->write (12);                                                                               // Writing OpenCL data...
+      cl->write (14);                                                                               // Writing OpenCL data...
     }
 
     ImGui::SameLine (100);
@@ -373,6 +389,8 @@ int main ()
   delete longitudinal_H;                                                                            // Deleting longitudinal magnetic field...
   delete transverse_H;                                                                              // Deleting tranverse magnetic field...
   delete temperature;                                                                               // Deleting temperature...
+  delete radial_exponent;                                                                           // Deleting radial exponent...
+  delete ds;                                                                                        // Deleting mesh side...
   delete dt;                                                                                        // Deleting time step data...
   delete K1;                                                                                        // Deleting OpenCL kernel...
   delete vacuum;                                                                                    // deleting vacuum mesh...
