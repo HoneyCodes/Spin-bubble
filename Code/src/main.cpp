@@ -14,7 +14,8 @@
 #define BORDER_TAG    6                                                                             // Border tag.
 #define SIDE_X_TAG    7                                                                             // Side "x" tag.
 #define SIDE_Y_TAG    8                                                                             // Side "y" tag.
-#define SURFACE_DIM   2                                                                             // Surface dimension.
+//#define SURFACE_DIM   2                                                                             // Surface dimension.
+#define SURFACE_DIM   1                                                                             // Surface dimension.
 #define BORDER_DIM    1                                                                             // Border dimension.
 #define SIDE_X_DIM    1                                                                             // Side "x" dimension.
 #define SIDE_Y_DIM    1                                                                             // Side "y" dimension.
@@ -45,7 +46,8 @@
 #define SHADER_FRAG   "voxel_fragment.frag"                                                         // OpenGL fragment shader.
 #define KERNEL_1      "thekernel_1.cl"                                                              // OpenCL kernel source.
 #define UTILITIES     "utilities.cl"                                                                // OpenCL utilities source.
-#define MESH_FILE     "Square_quadrangles.msh"                                                      // GMSH mesh.
+//#define MESH_FILE     "Square_quadrangles.msh"                                                      // GMSH mesh.
+#define MESH_FILE     "Line_segments.msh"                                                           // GMSH mesh.
 #define MESH          GMSH_HOME MESH_FILE                                                           // GMSH mesh (full path).
 
 // INCLUDES:
@@ -132,17 +134,18 @@ int main ()
   side_x_nodes    = vacuum->node.size ();                                                           // Getting number of nodes along "x" side...
 
   // MESH "Y" SIDE:
-  vacuum->process (SIDE_Y_TAG, SIDE_Y_DIM, nu::MSH_PNT);                                            // Processing mesh...
-  side_y_nodes    = vacuum->node.size ();                                                           // Getting number of nodes along "y" side...
+  //vacuum->process (SIDE_Y_TAG, SIDE_Y_DIM, nu::MSH_PNT);                                            // Processing mesh...
+  //side_y_nodes    = vacuum->node.size ();                                                           // Getting number of nodes along "y" side...
 
   // COMPUTING PHYSICAL PARAMETERS:
   dx              = (x_max - x_min)/(side_x_nodes - 1);                                             // x-axis mesh spatial size [m].
-  dy              = (y_max - y_min)/(side_y_nodes - 1);                                             // y-axis mesh spatial size [m].
+  //dy              = (y_max - y_min)/(side_y_nodes - 1);                                             // y-axis mesh spatial size [m].
   dt_simulation   = 1.0f;
   dt->data.push_back (dt_simulation);                                                               // Setting simulation time step...
 
   // MESH SURFACE:
-  vacuum->process (SURFACE_TAG, SURFACE_DIM, nu::MSH_QUA_4);                                        // Processing mesh...
+  //vacuum->process (SURFACE_TAG, SURFACE_DIM, nu::MSH_QUA_4);                                        // Processing mesh...
+  vacuum->process (SIDE_X_TAG, SURFACE_DIM, nu::MSH_LIN_2);                                         // Processing mesh...
   position->data  = vacuum->node_coordinates;                                                       // Setting all node coordinates...
   neighbour->data = vacuum->neighbour;                                                              // Setting neighbour indices...
   offset->data    = vacuum->neighbour_offset;                                                       // Setting neighbour offsets...
@@ -188,12 +191,12 @@ int main ()
   }
 
   // MESH BORDER:
-  vacuum->process (BORDER_TAG, BORDER_DIM, nu::MSH_PNT);                                            // Processing mesh...
-  border       = vacuum->node;                                                                      // Getting nodes on border...
-  border_nodes = border.size ();                                                                    // Getting the number of nodes on border...
+  //vacuum->process (BORDER_TAG, BORDER_DIM, nu::MSH_PNT);                                            // Processing mesh...
+  //border       = vacuum->node;                                                                      // Getting nodes on border...
+  //border_nodes = border.size ();                                                                    // Getting the number of nodes on border...
 
   // SETTING NEUTRINO ARRAYS ("border" depending):
-  for(i = 0; i < border_nodes; i++)
+  //for(i = 0; i < border_nodes; i++)
   {
     // Doing nothing!
   }
