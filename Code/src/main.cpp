@@ -45,6 +45,7 @@
 #define SHADER_GEOM   "voxel_geometry.geom"                                                         // OpenGL geometry shader.
 #define SHADER_FRAG   "voxel_fragment.frag"                                                         // OpenGL fragment shader.
 #define KERNEL_1      "thekernel_1.cl"                                                              // OpenCL kernel source.
+#define KERNEL_2      "thekernel_2.cl"                                                              // OpenCL kernel source.
 #define UTILITIES     "utilities.cl"                                                                // OpenCL utilities source.
 //#define MESH_FILE     "Square_quadrangles.msh"                                                      // GMSH mesh.
 #define MESH_FILE     "Line_segments.msh"                                                           // GMSH mesh.
@@ -80,21 +81,23 @@ int main ()
   // OPENCL:
   nu::opencl*                      cl              = new nu::opencl (nu::GPU);                      // OpenCL context.
   nu::kernel*                      K1              = new nu::kernel ();                             // OpenCL kernel array.
+  nu::kernel*                      K2              = new nu::kernel ();                             // OpenCL kernel array.
   nu::float4*                      color           = new nu::float4 (0);                            // Color [].
   nu::float4*                      position        = new nu::float4 (1);                            // Position [m].
   nu::int1*                        central         = new nu::int1 (2);                              // Central nodes.
   nu::int1*                        neighbour       = new nu::int1 (3);                              // Neighbour.
   nu::int1*                        offset          = new nu::int1 (4);                              // Offset.
   nu::float1*                      sz              = new nu::float1 (5);                            // z-component of the spin.
-  nu::int4*                        state_sz        = new nu::int4 (6);                              // Random generator state.
-  nu::int4*                        state_th        = new nu::int4 (7);                              // Random generator state.
-  nu::int1*                        max_rejections  = new nu::int1 (8);                              // Maximum allowed number of rejections.
-  nu::float1*                      longitudinal_H  = new nu::float1 (9);                            // Longitudinal magnetic field.
-  nu::float1*                      transverse_H    = new nu::float1 (10);                           // Transverse magnetic field.
-  nu::float1*                      temperature     = new nu::float1 (11);                           // Temperature.
-  nu::float1*                      radial_exponent = new nu::float1 (12);                           // Radial exponent.
-  nu::float1*                      ds              = new nu::float1 (13);                           // Mesh side.
-  nu::float1*                      dt              = new nu::float1 (14);                           // Time step [s].
+  nu::float1*                      sz_int          = new nu::float1 (6);                            // z-component of the spin (intermediate value).
+  nu::int4*                        state_sz        = new nu::int4 (7);                              // Random generator state.
+  nu::int4*                        state_th        = new nu::int4 (8);                              // Random generator state.
+  nu::int1*                        max_rejections  = new nu::int1 (9);                              // Maximum allowed number of rejections.
+  nu::float1*                      longitudinal_H  = new nu::float1 (10);                           // Longitudinal magnetic field.
+  nu::float1*                      transverse_H    = new nu::float1 (11);                           // Transverse magnetic field.
+  nu::float1*                      temperature     = new nu::float1 (12);                           // Temperature.
+  nu::float1*                      radial_exponent = new nu::float1 (13);                           // Radial exponent.
+  nu::float1*                      ds              = new nu::float1 (14);                           // Mesh side.
+  nu::float1*                      dt              = new nu::float1 (15);                           // Time step [s].
 
   // MESH:
   nu::mesh*                        vacuum          = new nu::mesh (MESH);                           // False vaccum domain.
@@ -125,6 +128,7 @@ int main ()
   // BACKUP:
   std::vector<nu_float4_structure> initial_position;                                                // Backing up initial data...
   std::vector<float>               initial_sz;                                                      // Backing up initial data...
+  std::vector<float>               initial_sz_int;                                                  // Backing up initial data...
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////// DATA INITIALIZATION ///////////////////////////////////////
@@ -167,6 +171,7 @@ int main ()
     state_th->data.push_back ({rand (), rand (), rand (), rand ()});                                // Setting state_th seed...
     color->data.push_back ({0.0f, 1.0f, 0.0f, 1.0f});                                               // Setting node color...
     sz->data.push_back (1.0f);                                                                      // Setting initial z-spin...
+    sz_int->data.push_back (0.0f);                                                                  // Setting initial z-spin (intermediate value)...
 
     // Computing minimum element offset index:
     if(i == 0)
@@ -212,6 +217,7 @@ int main ()
   // SETTING INITIAL DATA BACKUP:
   initial_position = position->data;                                                                // Setting backup data...
   initial_sz       = sz->data;                                                                      // Setting backup data...
+  initial_sz_int   = sz_int->data;                                                                  // Setting backup data...
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////// OPENCL KERNELS INITIALIZATION //////////////////////////////////
@@ -219,6 +225,9 @@ int main ()
   K1->addsource (std::string (KERNEL_HOME) + std::string (UTILITIES));                              // Setting kernel source file...
   K1->addsource (std::string (KERNEL_HOME) + std::string (KERNEL_1));                               // Setting kernel source file...
   K1->build (nodes, 0, 0);                                                                          // Building kernel program...
+  K2->addsource (std::string (KERNEL_HOME) + std::string (UTILITIES));                              // Setting kernel source file...
+  K2->addsource (std::string (KERNEL_HOME) + std::string (KERNEL_2));                               // Setting kernel source file...
+  K2->build (nodes, 0, 0);                                                                          // Building kernel program...
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////// OPENGL SHADERS INITIALIZATION //////////////////////////////////
@@ -241,6 +250,7 @@ int main ()
     cl->get_tic ();                                                                                 // Getting "tic" [us]...
     cl->acquire ();                                                                                 // Acquiring OpenCL kernel...
     cl->execute (K1, nu::WAIT);                                                                     // Executing OpenCL kernel...
+    cl->execute (K2, nu::WAIT);                                                                     // Executing OpenCL kernel...
     cl->release ();                                                                                 // Releasing OpenCL kernel...
 
     gl->clear ();                                                                                   // Clearing gl...
@@ -396,6 +406,7 @@ int main ()
   delete ds;                                                                                        // Deleting mesh side...
   delete dt;                                                                                        // Deleting time step data...
   delete K1;                                                                                        // Deleting OpenCL kernel...
+  delete K2;                                                                                        // Deleting OpenCL kernel...
   delete vacuum;                                                                                    // deleting vacuum mesh...
 
   return 0;
