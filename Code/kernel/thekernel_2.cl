@@ -32,23 +32,6 @@ __kernel void thekernel(__global float4*    color,                              
   ////////////////////////////////// CELL VARIABLES //////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////
   float4       p                 = position[n];                                 // Central node position.
-  float4       neighbour         = (float4)(0.0f, 0.0f, 0.0f, 1.0f);            // Neighbour node position.
-  float4       link              = (float4)(0.0f, 0.0f, 0.0f, 1.0f);            // Neighbour link.
-  float        L                 = 0.0f;                                        // Neighbour link length.
-  float        dt                = dt_simulation[0];                            // Simulation time step [s].
-  float        ds                = ds_simulation[0];                            // Simulation space step.
-  uint4        st_sz             = convert_uint4(state_sz[n]);                  // Random generator state.
-  uint4        st_th             = convert_uint4(state_th[n]);                  // Random generator state.
-  float        Hx                = longitudinal_H[0];                           // Longitudinal magnetic field.
-  float        Hz                = transverse_H[0];                             // Transverse magnetic field.
-  float        E                 = 0.0f;                                        // Energy function.
-  float        En                = 0.0f;                                        // Energy of central node.
-  float        sz_rand           = 0.0f;                                        // Flat tandom z-spin.
-  float        th_rand           = 0.0f;                                        // Flat random threshold.
-  float        T                 = temperature[0];                              // Temperature.
-  float        alpha             = radial_exponent[0];                          // Radial exponent.
-  float        D                 = 0.0f;                                        // Distributed random z-spin.
-  uint         m_max             = max_rejections[0];                           // Maximum allowed number of rejections.
   float4       c                 = color[n];                                    // Node color.
  
   // COMPUTING STRIDE MINIMUM INDEX:
