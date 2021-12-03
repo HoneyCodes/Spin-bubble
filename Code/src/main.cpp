@@ -44,6 +44,7 @@
 #define SHADER_VERT   "voxel_vertex.vert"                                                           // OpenGL vertex shader.
 #define SHADER_GEOM   "voxel_geometry.geom"                                                         // OpenGL geometry shader.
 #define SHADER_FRAG   "voxel_fragment.frag"                                                         // OpenGL fragment shader.
+#define KERNEL_0      "ramp_up.cl"                                                                  // OpenCL kernel source.
 #define KERNEL_1      "thekernel_1.cl"                                                              // OpenCL kernel source.
 #define KERNEL_2      "thekernel_2.cl"                                                              // OpenCL kernel source.
 #define UTILITIES     "utilities.cl"                                                                // OpenCL utilities source.
@@ -80,6 +81,7 @@ int main ()
 
   // OPENCL:
   nu::opencl*                      cl              = new nu::opencl (nu::GPU);                      // OpenCL context.
+  nu::kernel*                      K0              = new nu::kernel ();                             // OpenCL kernel array.
   nu::kernel*                      K1              = new nu::kernel ();                             // OpenCL kernel array.
   nu::kernel*                      K2              = new nu::kernel ();                             // OpenCL kernel array.
   nu::float4*                      color           = new nu::float4 (0);                            // Color [].
@@ -130,9 +132,9 @@ int main ()
   std::vector<float>               initial_sz;                                                      // Backing up initial data...
   std::vector<float>               initial_sz_int;                                                  // Backing up initial data...
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
-  ///////////////////////////////////////// DATA INITIALIZATION ///////////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  ///////////////////////////////////////// DATA INITIALIZATION //////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
   // MESH "X" SIDE:
   vacuum->process (SIDE_X_TAG, SIDE_X_DIM, nu::MSH_PNT);                                            // Processing mesh...
   side_x_nodes    = vacuum->node.size ();                                                           // Getting number of nodes along "x" side...
@@ -219,9 +221,12 @@ int main ()
   initial_sz       = sz->data;                                                                      // Setting backup data...
   initial_sz_int   = sz_int->data;                                                                  // Setting backup data...
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
-  //////////////////////////////////// OPENCL KERNELS INITIALIZATION //////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////// OPENCL KERNELS INITIALIZATION /////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  K0->addsource (std::string (KERNEL_HOME) + std::string (UTILITIES));                              // Setting kernel source file...
+  K0->addsource (std::string (KERNEL_HOME) + std::string (KERNEL_0));                               // Setting kernel source file...
+  K0->build (nodes, 0, 0);                                                                          // Building kernel program...
   K1->addsource (std::string (KERNEL_HOME) + std::string (UTILITIES));                              // Setting kernel source file...
   K1->addsource (std::string (KERNEL_HOME) + std::string (KERNEL_1));                               // Setting kernel source file...
   K1->build (nodes, 0, 0);                                                                          // Building kernel program...
@@ -229,22 +234,29 @@ int main ()
   K2->addsource (std::string (KERNEL_HOME) + std::string (KERNEL_2));                               // Setting kernel source file...
   K2->build (nodes, 0, 0);                                                                          // Building kernel program...
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
-  //////////////////////////////////// OPENGL SHADERS INITIALIZATION //////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////// OPENGL SHADERS INITIALIZATION /////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
   S->addsource (std::string (SHADER_HOME) + std::string (SHADER_VERT), nu::VERTEX);                 // Setting shader source file...
   S->addsource (std::string (SHADER_HOME) + std::string (SHADER_GEOM), nu::GEOMETRY);               // Setting shader source file...
   S->addsource (std::string (SHADER_HOME) + std::string (SHADER_FRAG), nu::FRAGMENT);               // Setting shader source file...
   S->build (nodes);                                                                                 // Building shader program...
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////////// SETTING OPENCL KERNEL ARGUMENTS //////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////// SETTING OPENCL KERNEL ARGUMENTS /////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
   cl->write ();                                                                                     // Writing OpenCL data...
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////////////////// APPLICATION LOOP /////////////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////// CHARGING RANDOM GENERATORS ////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  cl->acquire ();                                                                                   // Acquiring OpenCL kernel...
+  cl->execute (K0, nu::WAIT);                                                                       // Executing OpenCL kernel...
+  cl->release ();                                                                                   // Releasing OpenCL kernel...
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////// APPLICATION LOOP ////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
   while(!gl->closed ())                                                                             // Opening window...
   {
     cl->get_tic ();                                                                                 // Getting "tic" [us]...
@@ -385,9 +397,9 @@ int main ()
   ImGui_ImplGlfw_Shutdown ();                                                                       // Deinitializing ImGui...
   ImGui::DestroyContext ();                                                                         // Deinitializing ImGui...
 
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
-  /////////////////////////////////////////////// CLEANUP /////////////////////////////////////////////
-  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////// CLEANUP ////////////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
   delete cl;                                                                                        // Deleting OpenCL context...
   delete gl;                                                                                        // Deleting OpenGL context...
   delete S;                                                                                         // Deleting shader...
