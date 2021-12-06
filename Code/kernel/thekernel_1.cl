@@ -96,9 +96,15 @@ __kernel void thekernel(__global float4*    color,                              
       neighbour = position[k];                                                  // Getting neighbour position...
       link = neighbour.xy - p.xy;                                               // Getting neighbour link vector...
       L = length(link);                                                         // Computing neighbour link length...
-      if (L > 0.5f)
+
+      if (L == (2.0f + ds))
       {
-        printf("L = %f, n.x = %f, n.y = %f, p.x = %f, p.y = %f\n", L, neighbour.x, neighbour.y, p.x, p.y);
+        L = ds;
+      }
+
+      if (L > (2.0f + ds))
+      {
+        L = sqrt(2.0f)*ds;
       }
       
       En += E_neighbour(0.5f/pow(L/ds, alpha), sz[k], sz[n]);                   // Accumulating neighbour energy terms on central z-spin...
@@ -109,8 +115,6 @@ __kernel void thekernel(__global float4*    color,                              
     m++;                                                                        // Updating rejection index...
   }
   while ((th_rand > D) && (m < m_max));                                         // Evaluating new z-spin candidate (discarding if not found before m_max iterations)...
-
-  //printf("D = %f, th_rand = %f, m = %d\n", D, th_rand, m);
 
   sz_int[n] = sz_rand;                                                          // Setting new z-spin (intermediate value)...
   state_sz[n] = convert_int4(st_sz);                                            // Updating random generator state...
