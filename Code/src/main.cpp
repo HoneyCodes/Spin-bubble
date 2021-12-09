@@ -14,8 +14,8 @@
 #define BORDER_TAG    9                                                                             // Border tag.
 #define SIDE_X_TAG    10                                                                            // Side "x" tag.
 #define SIDE_Y_TAG    11                                                                            // Side "y" tag.
+#define CURVE_DIM     1                                                                             // Curve dimension.
 #define SURFACE_DIM   2                                                                             // Surface dimension.
-//#define SURFACE_DIM   1                                                                             // Surface dimension.
 #define BORDER_DIM    1                                                                             // Border dimension.
 #define SIDE_X_DIM    1                                                                             // Side "x" dimension.
 #define SIDE_Y_DIM    1                                                                             // Side "y" dimension.
@@ -49,8 +49,7 @@
 #define KERNEL_2      "thekernel_2.cl"                                                              // OpenCL kernel source.
 #define UTILITIES     "utilities.cl"                                                                // OpenCL utilities source.
 #define MESH_FILE     "Periodic_square.msh"                                                         // GMSH mesh.
-//#define MESH_FILE     "Square_quadrangles.msh"                                                      // GMSH mesh.
-//#define MESH_FILE     "Line_segments.msh"                                                           // GMSH mesh.
+//#define MESH_FILE     "Periodic_segment.msh"                                                           // GMSH mesh.
 #define MESH          GMSH_HOME MESH_FILE                                                           // GMSH mesh (full path).
 
 // INCLUDES:
