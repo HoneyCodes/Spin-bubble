@@ -4,11 +4,11 @@ __kernel void thekernel(__global float4*    color,                              
                         __global float4*    position,                           // Position.
                         __global int*       central,                            // Node.
                         __global int*       nearest,                            // Neighbour.
-                        __global int*       offset,                             // Offset.
-                        __global float*     sz,                                 // z-component of the spin.  
-                        __global float*     sz_int,                             // z-component of the spin (intermediate value). 
-                        __global int4*      state_sz,                           // Random number generator state.
-                        __global int4*      state_th,                           // Random number generator state. 
+                        __global int*       offset,                             // Offset. 
+                        __global float*     theta,                              // Theta.  
+                        __global float*     theta_int,                          // Theta (intermediate value). 
+                        __global int4*      state_theta,                        // Random number generator state.
+                        __global int4*      state_threshold,                    // Random number generator state. 
                         __global int*       max_rejections,                     // Maximum allowed number of rejections. 
                         __global float*     longitudinal_H,                     // Longitudinal magnetic field.
                         __global float*     transverse_H,                       // Transverse magnetic field.
@@ -44,8 +44,8 @@ __kernel void thekernel(__global float4*    color,                              
     j_min = offset[i - 1];                                                      // Setting stride minimum (all others)...
   }
 
-  sz[n] = sz_int[n];                                                            // Setting new z-spin...
-  p.z = 0.05f*sz[n];                                                            // Setting new z position...
+  theta[n] = theta_int[n];                                                      // Setting new theta...
+  p.z = 0.05f*sin(theta[n]);                                                    // Setting new z position...
   c.xyz = colormap(0.5f*(20.0f*p.z + 1.0f));                                    // Setting color...
   color[n] = c;                                                                 // Updating color...
   position[n] = p;                                                              // Updating position...
