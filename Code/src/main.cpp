@@ -48,6 +48,7 @@
 #define KERNEL_0      "ramp_up.cl"                                                                  // OpenCL kernel source.
 #define KERNEL_1      "thekernel_1.cl"                                                              // OpenCL kernel source.
 #define KERNEL_2      "thekernel_2.cl"                                                              // OpenCL kernel source.
+#define KERNEL_3      "thekernel_3.cl"                                                              // OpenCL kernel source.
 #define UTILITIES     "utilities.cl"                                                                // OpenCL utilities source.
 #define MESH_FILE     "Periodic_square.msh"                                                         // GMSH mesh.
 //#define MESH_FILE     "Periodic_segment.msh"                                                           // GMSH mesh.
@@ -57,29 +58,37 @@
 #include "nu.hpp"                                                                                   // Neutrino's header file.
 
 // utility structure for realtime plot
-struct ScrollingBuffer {
+struct ScrollingBuffer
+{
   int MaxSize;
   int Offset;
   ImVector<ImVec2> Data;
+
   ScrollingBuffer(
                   int max_size = 2000
-                 ) {
+                 )
+  {
     MaxSize = max_size;
     Offset  = 0;
     Data.reserve (MaxSize);
   }
+
   void AddPoint (
                  float x,
                  float y
-                ) {
+                )
+  {
     if(Data.size () < MaxSize)
       Data.push_back (ImVec2 (x,y));
-    else {
+    else
+    {
       Data[Offset] = ImVec2 (x,y);
       Offset       = (Offset + 1) % MaxSize;
     }
   }
-  void Erase () {
+
+  void Erase ()
+  {
     if(Data.size () > 0)
     {
       Data.shrink (0);
@@ -88,47 +97,28 @@ struct ScrollingBuffer {
   }
 };
 
-// utility structure for realtime plot
-struct RollingBuffer {
-  float Span;
-  ImVector<ImVec2> Data;
-  RollingBuffer() {
-    Span = 10.0f;
-    Data.reserve (2000);
-  }
-  void AddPoint (
-                 float x,
-                 float y
-                ) {
-    float xmod = fmodf (x, Span);
-    if(!Data.empty () && xmod < Data.back ().x)
-      Data.shrink (0);
-    Data.push_back (ImVec2 (xmod, y));
-  }
-};
-
-void ShowDemo_RealtimePlots () {
-  static ScrollingBuffer sdata1, sdata2;
+void ShowDemo_RealtimePlots (
+                             float value
+                            )
+{
+  static ScrollingBuffer sdata1;
 
   ImVec2                 mouse   = ImGui::GetMousePos ();
   static float           t       = 0;
   t += ImGui::GetIO ().DeltaTime;
-  sdata1.AddPoint (t, mouse.x * 0.0005f);
-
-  sdata2.AddPoint (t, mouse.y * 0.0005f);
-
-
+  //sdata1.AddPoint (t, mouse.x*0.0005f);
+  sdata1.AddPoint (t, value);
   static float           history = 10.0f;
-  ImGui::SliderFloat ("History",&history,1,30,"%.1f s");
+  ImGui::SliderFloat ("History", &history, 1, 30, "%.1f s");
 
   static ImPlotAxisFlags flags   = ImPlotAxisFlags_NoTickLabels;
 
   if(ImPlot::BeginPlot ("##Scrolling", ImVec2 (-1,150)))
   {
     ImPlot::SetupAxes (NULL, NULL, flags, flags);
-    ImPlot::SetupAxisLimits (ImAxis_X1,t - history, t, ImGuiCond_Always);
-    ImPlot::SetupAxisLimits (ImAxis_Y1,0,1);
-    ImPlot::SetNextFillStyle (IMPLOT_AUTO_COL,0.5f);
+    ImPlot::SetupAxisLimits (ImAxis_X1, t - history, t, ImGuiCond_Always);
+    ImPlot::SetupAxisLimits (ImAxis_Y1, 0, 1);
+    ImPlot::SetNextFillStyle (IMPLOT_AUTO_COL, 0.5f);
     ImPlot::PlotShaded (
                         "",
                         &sdata1.Data[0].x,
@@ -136,7 +126,7 @@ void ShowDemo_RealtimePlots () {
                         sdata1.Data.size (),
                         -INFINITY,
                         sdata1.Offset,
-                        2 * sizeof(float)
+                        2*sizeof(float)
                        );
     ImPlot::PlotLine (
                       "Mouse X",
@@ -144,7 +134,7 @@ void ShowDemo_RealtimePlots () {
                       &sdata1.Data[0].y,
                       sdata1.Data.size (),
                       sdata1.Offset,
-                      2 * sizeof(float)
+                      2*sizeof(float)
                      );
 
     ImPlot::EndPlot ();
@@ -181,6 +171,7 @@ int main ()
   nu::kernel*                      K0              = new nu::kernel ();                             // OpenCL kernel array.
   nu::kernel*                      K1              = new nu::kernel ();                             // OpenCL kernel array.
   nu::kernel*                      K2              = new nu::kernel ();                             // OpenCL kernel array.
+  nu::kernel*                      K3              = new nu::kernel ();                             // OpenCL kernel array.
   nu::float4*                      color           = new nu::float4 (0);                            // Color [].
   nu::float4*                      position        = new nu::float4 (1);                            // Position [m].
   nu::int1*                        central         = new nu::int1 (2);                              // Central nodes.
@@ -195,8 +186,10 @@ int main ()
   nu::float1*                      transverse_H    = new nu::float1 (11);                           // Transverse magnetic field.
   nu::float1*                      temperature     = new nu::float1 (12);                           // Temperature.
   nu::float1*                      radial_exponent = new nu::float1 (13);                           // Radial exponent.
-  nu::float1*                      ds              = new nu::float1 (14);                           // Mesh side.
-  nu::float1*                      dt              = new nu::float1 (15);                           // Time step [s].
+  nu::int1*                        rows            = new nu::int1 (14);                             // Number of rows in mesh.
+  nu::float1*                      spin_z_row_sum  = new nu::float1 (15);                           // z-spin row summation.
+  nu::float1*                      ds              = new nu::float1 (16);                           // Mesh side.
+  nu::float1*                      dt              = new nu::float1 (17);                           // Time step [s].
 
   // MESH:
   nu::mesh*                        vacuum          = new nu::mesh (MESH);                           // False vacuum domain.
@@ -223,6 +216,7 @@ int main ()
   float                            T           = T_INIT;                                            // Temperature.
   float                            alpha       = ALPHA_INIT;                                        // Radial exponent.
   float                            theta_angle = THETA_INIT;                                        // Theta angle.
+  float                            spin_z_avg  = 0.0f;                                              // Average z-spin.
   float                            dt_simulation;                                                   // Simulation time step [s].
 
   // BACKUP:
@@ -240,6 +234,7 @@ int main ()
   // MESH "Y" SIDE:
   vacuum->process (SIDE_Y_TAG, SIDE_Y_DIM, nu::MSH_PNT);                                            // Processing mesh...
   side_y_nodes    = vacuum->node.size ();                                                           // Getting number of nodes along "y" side...
+  rows->data.push_back ((int)side_y_nodes);                                                         // Setting number of mesh rows...
 
   // COMPUTING PHYSICAL PARAMETERS:
   dx              = (x_max - x_min)/(side_x_nodes - 1);                                             // x-axis mesh spatial size [m].
@@ -295,6 +290,11 @@ int main ()
     std::cout << std::endl;                                                                         // Printing message...
   }
 
+  for(i = 0; i < side_y_nodes; i++)
+  {
+    spin_z_row_sum->data.push_back (0.0f);                                                          // Resetting z-spin row summation...
+  }
+
   // MESH BORDER:
   vacuum->process (BORDER_TAG, BORDER_DIM, nu::MSH_PNT);                                            // Processing mesh...
   border       = vacuum->node;                                                                      // Getting nodes on border...
@@ -331,6 +331,9 @@ int main ()
   K2->addsource (std::string (KERNEL_HOME) + std::string (UTILITIES));                              // Setting kernel source file...
   K2->addsource (std::string (KERNEL_HOME) + std::string (KERNEL_2));                               // Setting kernel source file...
   K2->build (nodes, 0, 0);                                                                          // Building kernel program...
+  K3->addsource (std::string (KERNEL_HOME) + std::string (UTILITIES));                              // Setting kernel source file...
+  K3->addsource (std::string (KERNEL_HOME) + std::string (KERNEL_3));                               // Setting kernel source file...
+  K3->build (side_y_nodes, 0, 0);                                                                   // Building kernel program...
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////// OPENGL SHADERS INITIALIZATION /////////////////////////////////
@@ -361,6 +364,7 @@ int main ()
     cl->acquire ();                                                                                 // Acquiring OpenCL kernel...
     cl->execute (K1, nu::WAIT);                                                                     // Executing OpenCL kernel...
     cl->execute (K2, nu::WAIT);                                                                     // Executing OpenCL kernel...
+    cl->execute (K3, nu::WAIT);                                                                     // Executing OpenCL kernel...
     cl->release ();                                                                                 // Releasing OpenCL kernel...
 
     gl->begin ();                                                                                   // Beginning gl...
@@ -450,8 +454,8 @@ int main ()
       cl->write (10);                                                                               // Writing OpenCL data...
       cl->write (11);                                                                               // Writing OpenCL data...
       cl->write (12);                                                                               // Writing OpenCL data...
-      cl->write (13);                                                                               // Writing OpenCL data...
-      cl->write (15);                                                                               // Writing OpenCL data...
+      cl->write (16);                                                                               // Writing OpenCL data...
+      cl->write (17);                                                                               // Writing OpenCL data...
     }
 
     ImGui::SameLine (100);
@@ -500,7 +504,18 @@ int main ()
       gl->close ();                                                                                 // Closing gl...
     }
 
-    ShowDemo_RealtimePlots ();
+    cl->read (15);                                                                                  // Reading spin_z_row_sum...
+    spin_z_avg  = 0.0f;
+
+    for(i = 0; i < side_y_nodes; i++)
+    {
+      spin_z_avg += spin_z_row_sum->data[i];
+    }
+
+    spin_z_avg /= nodes;
+    std::cout << "spin avg = " << spin_z_avg << std::endl;
+
+    ShowDemo_RealtimePlots (spin_z_avg);
 
     ImGui::End ();                                                                                  // Finishing window...
 
@@ -530,8 +545,10 @@ int main ()
   delete radial_exponent;                                                                           // Deleting radial exponent...
   delete ds;                                                                                        // Deleting mesh side...
   delete dt;                                                                                        // Deleting time step data...
+  delete K0;                                                                                        // Deleting OpenCL kernel...
   delete K1;                                                                                        // Deleting OpenCL kernel...
   delete K2;                                                                                        // Deleting OpenCL kernel...
+  delete K3;                                                                                        // Deleting OpenCL kernel...
   delete vacuum;                                                                                    // deleting vacuum mesh...
 
   return 0;
