@@ -117,7 +117,7 @@ void ShowDemo_RealtimePlots (
   {
     ImPlot::SetupAxes (NULL, NULL, flags, flags);
     ImPlot::SetupAxisLimits (ImAxis_X1, t - history, t, ImGuiCond_Always);
-    ImPlot::SetupAxisLimits (ImAxis_Y1, 0, 1);
+    ImPlot::SetupAxisLimits (ImAxis_Y1, -1, 1);
     ImPlot::SetNextFillStyle (IMPLOT_AUTO_COL, 0.5f);
     ImPlot::PlotShaded (
                         "",
@@ -129,7 +129,7 @@ void ShowDemo_RealtimePlots (
                         2*sizeof(float)
                        );
     ImPlot::PlotLine (
-                      "Mouse X",
+                      "<sz>",
                       &sdata1.Data[0].x,
                       &sdata1.Data[0].y,
                       sdata1.Data.size (),
@@ -513,7 +513,6 @@ int main ()
     }
 
     spin_z_avg /= nodes;
-    std::cout << "spin avg = " << spin_z_avg << std::endl;
 
     ShowDemo_RealtimePlots (spin_z_avg);
 
