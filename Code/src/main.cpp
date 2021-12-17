@@ -79,7 +79,10 @@ struct ScrollingBuffer
                 )
   {
     if(Data.size () < MaxSize)
+    {
       Data.push_back (ImVec2 (x,y));
+    }
+
     else
     {
       Data[Offset] = ImVec2 (x,y);
@@ -98,20 +101,22 @@ struct ScrollingBuffer
 };
 
 void ShowDemo_RealtimePlots (
-                             float value
+                             float mean,
+                             float std
                             )
 {
-  static ScrollingBuffer sdata1;
-
-  ImVec2                 mouse   = ImGui::GetMousePos ();
+  static ScrollingBuffer data_avg;
+  static ScrollingBuffer data_std_up;
+  static ScrollingBuffer data_std_down;
   static float           t       = 0;
-  t += ImGui::GetIO ().DeltaTime;
-  //sdata1.AddPoint (t, mouse.x*0.0005f);
-  sdata1.AddPoint (t, value);
   static float           history = 10.0f;
   ImGui::SliderFloat ("History", &history, 1, 30, "%.1f s");
-
   static ImPlotAxisFlags flags   = ImPlotAxisFlags_NoTickLabels;
+
+  t += ImGui::GetIO ().DeltaTime;
+  data_avg.AddPoint (t, mean);
+  data_std_up.AddPoint (t, mean + std);
+  data_std_down.AddPoint (t, mean - std);
 
   if(ImPlot::BeginPlot ("##Scrolling", ImVec2 (-1,150)))
   {
@@ -120,20 +125,20 @@ void ShowDemo_RealtimePlots (
     ImPlot::SetupAxisLimits (ImAxis_Y1, -1, 1);
     ImPlot::SetNextFillStyle (IMPLOT_AUTO_COL, 0.5f);
     ImPlot::PlotShaded (
-                        "",
-                        &sdata1.Data[0].x,
-                        &sdata1.Data[0].y,
-                        sdata1.Data.size (),
-                        -INFINITY,
-                        sdata1.Offset,
+                        "std(sz)",
+                        &data_avg.Data[0].x,
+                        &data_std_up.Data[0].y,
+                        &data_std_down.Data[0].y,
+                        data_avg.Data.size (),
+                        data_avg.Offset,
                         2*sizeof(float)
                        );
     ImPlot::PlotLine (
-                      "<sz>",
-                      &sdata1.Data[0].x,
-                      &sdata1.Data[0].y,
-                      sdata1.Data.size (),
-                      sdata1.Offset,
+                      "avg(sz)",
+                      &data_avg.Data[0].x,
+                      &data_avg.Data[0].y,
+                      data_avg.Data.size (),
+                      data_avg.Offset,
                       2*sizeof(float)
                      );
 
@@ -188,8 +193,9 @@ int main ()
   nu::float1*                      radial_exponent = new nu::float1 (13);                           // Radial exponent.
   nu::int1*                        rows            = new nu::int1 (14);                             // Number of rows in mesh.
   nu::float1*                      spin_z_row_sum  = new nu::float1 (15);                           // z-spin row summation.
-  nu::float1*                      ds              = new nu::float1 (16);                           // Mesh side.
-  nu::float1*                      dt              = new nu::float1 (17);                           // Time step [s].
+  nu::float1*                      spin_z2_row_sum = new nu::float1 (16);                           // z-spin square row summation.
+  nu::float1*                      ds              = new nu::float1 (17);                           // Mesh side.
+  nu::float1*                      dt              = new nu::float1 (18);                           // Time step [s].
 
   // MESH:
   nu::mesh*                        vacuum          = new nu::mesh (MESH);                           // False vacuum domain.
@@ -217,6 +223,7 @@ int main ()
   float                            alpha       = ALPHA_INIT;                                        // Radial exponent.
   float                            theta_angle = THETA_INIT;                                        // Theta angle.
   float                            spin_z_avg  = 0.0f;                                              // Average z-spin.
+  float                            spin_z_std  = 0.0f;                                              // Standard deviation z-spin.
   float                            dt_simulation;                                                   // Simulation time step [s].
 
   // BACKUP:
@@ -293,6 +300,7 @@ int main ()
   for(i = 0; i < side_y_nodes; i++)
   {
     spin_z_row_sum->data.push_back (0.0f);                                                          // Resetting z-spin row summation...
+    spin_z2_row_sum->data.push_back (0.0f);                                                         // Resetting z-spin square row summation...
   }
 
   // MESH BORDER:
@@ -454,8 +462,8 @@ int main ()
       cl->write (10);                                                                               // Writing OpenCL data...
       cl->write (11);                                                                               // Writing OpenCL data...
       cl->write (12);                                                                               // Writing OpenCL data...
-      cl->write (16);                                                                               // Writing OpenCL data...
       cl->write (17);                                                                               // Writing OpenCL data...
+      cl->write (18);                                                                               // Writing OpenCL data...
     }
 
     ImGui::SameLine (100);
@@ -505,16 +513,22 @@ int main ()
     }
 
     cl->read (15);                                                                                  // Reading spin_z_row_sum...
-    spin_z_avg  = 0.0f;
+    cl->read (16);                                                                                  // Reading spin_z2_row_sum...
+    spin_z_avg  = 0.0f;                                                                             // Resetting z-spin average...
+    spin_z_std  = 0.0f;                                                                             // Resetting z-spin standard deviation...
 
     for(i = 0; i < side_y_nodes; i++)
     {
-      spin_z_avg += spin_z_row_sum->data[i];
+      spin_z_avg += spin_z_row_sum->data[i];                                                        // Summating spin_z_row_sum by rows...
+      spin_z_std += spin_z2_row_sum->data[i];                                                       // Summating spin_z2_row_sum by rows...
     }
 
-    spin_z_avg /= nodes;
+    spin_z_avg /= nodes;                                                                            // Computing z-spin average...
+    spin_z_std  = sqrt (spin_z_std/nodes - pow (spin_z_avg, 2));                                    // Computing z-spin standard deviation...
 
-    ShowDemo_RealtimePlots (spin_z_avg);
+    std::cout << "avg = " << spin_z_avg << " std = " << spin_z_std << std::endl;
+
+    ShowDemo_RealtimePlots (spin_z_avg, spin_z_std);
 
     ImGui::End ();                                                                                  // Finishing window...
 
