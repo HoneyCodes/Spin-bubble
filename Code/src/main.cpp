@@ -100,10 +100,10 @@ struct ScrollingBuffer
   }
 };
 
-void ShowDemo_RealtimePlots (
-                             float mean,
-                             float std
-                            )
+void RealtimePlot (
+                   float mean,
+                   float std
+                  )
 {
   static ScrollingBuffer data_avg;
   static ScrollingBuffer data_std_up;
@@ -111,7 +111,7 @@ void ShowDemo_RealtimePlots (
   static float           t       = 0;
   static float           history = 10.0f;
   ImGui::SliderFloat ("History", &history, 1, 30, "%.1f s");
-  static ImPlotAxisFlags flags   = ImPlotAxisFlags_NoTickLabels;
+  static ImPlotAxisFlags flags   = ImPlotAxisFlags_AutoFit;
 
   t += ImGui::GetIO ().DeltaTime;
   data_avg.AddPoint (t, mean);
@@ -120,7 +120,7 @@ void ShowDemo_RealtimePlots (
 
   if(ImPlot::BeginPlot ("##Scrolling", ImVec2 (-1,150)))
   {
-    ImPlot::SetupAxes (NULL, NULL, flags, flags);
+    ImPlot::SetupAxes ("time [s]", "spin-z []", flags, flags);
     ImPlot::SetupAxisLimits (ImAxis_X1, t - history, t, ImGuiCond_Always);
     ImPlot::SetupAxisLimits (ImAxis_Y1, -1, 1);
     ImPlot::SetNextFillStyle (IMPLOT_AUTO_COL, 0.5f);
@@ -524,11 +524,11 @@ int main ()
     }
 
     spin_z_avg /= nodes;                                                                            // Computing z-spin average...
-    spin_z_std  = sqrt (spin_z_std/nodes - pow (spin_z_avg, 2));                                    // Computing z-spin standard deviation...
+    spin_z_std  = (float)sqrt (spin_z_std/nodes - pow (spin_z_avg, 2));                             // Computing z-spin standard deviation...
 
     std::cout << "avg = " << spin_z_avg << " std = " << spin_z_std << std::endl;
 
-    ShowDemo_RealtimePlots (spin_z_avg, spin_z_std);
+    RealtimePlot (spin_z_avg, spin_z_std);                                                          // Plotting average spin-z and its standard deviation...
 
     ImGui::End ();                                                                                  // Finishing window...
 
