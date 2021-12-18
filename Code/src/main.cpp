@@ -150,86 +150,81 @@ void RealtimePlot (
 int main ()
 {
   // INDICES:
-  size_t                           i;                                                               // Index [#].
-  size_t                           j;                                                               // Index [#].
-  size_t                           j_min;                                                           // Index [#].
-  size_t                           j_max;                                                           // Index [#].
+  size_t              i;                                                                            // Index [#].
+  size_t              j;                                                                            // Index [#].
+  size_t              j_min;                                                                        // Index [#].
+  size_t              j_max;                                                                        // Index [#].
 
   // MOUSE PARAMETERS:
-  float                            ms_orbit_rate   = 1.0f;                                          // Orbit rotation rate [rev/s].
-  float                            ms_pan_rate     = 5.0f;                                          // Pan translation rate [m/s].
-  float                            ms_decaytime    = 1.25f;                                         // Pan LP filter decay time [s].
+  float               ms_orbit_rate   = 1.0f;                                                       // Orbit rotation rate [rev/s].
+  float               ms_pan_rate     = 5.0f;                                                       // Pan translation rate [m/s].
+  float               ms_decaytime    = 1.25f;                                                      // Pan LP filter decay time [s].
 
   // GAMEPAD PARAMETERS:
-  float                            gmp_orbit_rate  = 1.0f;                                          // Orbit angular rate coefficient [rev/s].
-  float                            gmp_pan_rate    = 1.0f;                                          // Pan translation rate [m/s].
-  float                            gmp_decaytime   = 1.25f;                                         // Low pass filter decay time [s].
-  float                            gmp_deadzone    = 0.30f;                                         // Gamepad joystick deadzone [0...1].
+  float               gmp_orbit_rate  = 1.0f;                                                       // Orbit angular rate coefficient [rev/s].
+  float               gmp_pan_rate    = 1.0f;                                                       // Pan translation rate [m/s].
+  float               gmp_decaytime   = 1.25f;                                                      // Low pass filter decay time [s].
+  float               gmp_deadzone    = 0.30f;                                                      // Gamepad joystick deadzone [0...1].
 
   // OPENGL:
-  nu::opengl*                      gl              = new nu::opengl (NAME,SX,SY,OX,OY,PX,PY,PZ);    // OpenGL context.
-  nu::shader*                      S               = new nu::shader ();                             // OpenGL shader program.
-  nu::projection_mode              proj_mode       = nu::MONOCULAR;                                 // OpenGL projection mode.
+  nu::opengl*         gl              = new nu::opengl (NAME,SX,SY,OX,OY,PX,PY,PZ);                 // OpenGL context.
+  nu::shader*         S               = new nu::shader ();                                          // OpenGL shader program.
+  nu::projection_mode proj_mode       = nu::MONOCULAR;                                              // OpenGL projection mode.
 
   // OPENCL:
-  nu::opencl*                      cl              = new nu::opencl (nu::GPU);                      // OpenCL context.
-  nu::kernel*                      K0              = new nu::kernel ();                             // OpenCL kernel array.
-  nu::kernel*                      K1              = new nu::kernel ();                             // OpenCL kernel array.
-  nu::kernel*                      K2              = new nu::kernel ();                             // OpenCL kernel array.
-  nu::kernel*                      K3              = new nu::kernel ();                             // OpenCL kernel array.
-  nu::float4*                      color           = new nu::float4 (0);                            // Color [].
-  nu::float4*                      position        = new nu::float4 (1);                            // Position [m].
-  nu::int1*                        central         = new nu::int1 (2);                              // Central nodes.
-  nu::int1*                        neighbour       = new nu::int1 (3);                              // Neighbour.
-  nu::int1*                        offset          = new nu::int1 (4);                              // Offset.
-  nu::float1*                      theta           = new nu::float1 (5);                            // Theta.
-  nu::float1*                      theta_int       = new nu::float1 (6);                            // Theta (intermediate value).
-  nu::int4*                        state_theta     = new nu::int4 (7);                              // Random generator state.
-  nu::int4*                        state_threshold = new nu::int4 (8);                              // Random generator state.
-  nu::int1*                        max_rejections  = new nu::int1 (9);                              // Maximum allowed number of rejections.
-  nu::float1*                      longitudinal_H  = new nu::float1 (10);                           // Longitudinal magnetic field.
-  nu::float1*                      transverse_H    = new nu::float1 (11);                           // Transverse magnetic field.
-  nu::float1*                      temperature     = new nu::float1 (12);                           // Temperature.
-  nu::float1*                      radial_exponent = new nu::float1 (13);                           // Radial exponent.
-  nu::int1*                        rows            = new nu::int1 (14);                             // Number of rows in mesh.
-  nu::float1*                      spin_z_row_sum  = new nu::float1 (15);                           // z-spin row summation.
-  nu::float1*                      spin_z2_row_sum = new nu::float1 (16);                           // z-spin square row summation.
-  nu::float1*                      ds              = new nu::float1 (17);                           // Mesh side.
-  nu::float1*                      dt              = new nu::float1 (18);                           // Time step [s].
+  nu::opencl*         cl              = new nu::opencl (nu::GPU);                                   // OpenCL context.
+  nu::kernel*         K0              = new nu::kernel ();                                          // OpenCL kernel array.
+  nu::kernel*         K1              = new nu::kernel ();                                          // OpenCL kernel array.
+  nu::kernel*         K2              = new nu::kernel ();                                          // OpenCL kernel array.
+  nu::kernel*         K3              = new nu::kernel ();                                          // OpenCL kernel array.
+  nu::float4*         color           = new nu::float4 (0);                                         // Color [].
+  nu::float4*         position        = new nu::float4 (1);                                         // Position [m].
+  nu::int1*           central         = new nu::int1 (2);                                           // Central nodes.
+  nu::int1*           neighbour       = new nu::int1 (3);                                           // Neighbour.
+  nu::int1*           offset          = new nu::int1 (4);                                           // Offset.
+  nu::float1*         theta           = new nu::float1 (5);                                         // Theta.
+  nu::float1*         theta_int       = new nu::float1 (6);                                         // Theta (intermediate value).
+  nu::int4*           state_theta     = new nu::int4 (7);                                           // Random generator state.
+  nu::int4*           state_threshold = new nu::int4 (8);                                           // Random generator state.
+  nu::int1*           max_rejections  = new nu::int1 (9);                                           // Maximum allowed number of rejections.
+  nu::float1*         longitudinal_H  = new nu::float1 (10);                                        // Longitudinal magnetic field.
+  nu::float1*         transverse_H    = new nu::float1 (11);                                        // Transverse magnetic field.
+  nu::float1*         temperature     = new nu::float1 (12);                                        // Temperature.
+  nu::float1*         radial_exponent = new nu::float1 (13);                                        // Radial exponent.
+  nu::int1*           rows            = new nu::int1 (14);                                          // Number of rows in mesh.
+  nu::float1*         spin_z_row_sum  = new nu::float1 (15);                                        // z-spin row summation.
+  nu::float1*         spin_z2_row_sum = new nu::float1 (16);                                        // z-spin square row summation.
+  nu::float1*         ds              = new nu::float1 (17);                                        // Mesh side.
+  nu::float1*         dt              = new nu::float1 (18);                                        // Time step [s].
 
   // MESH:
-  nu::mesh*                        vacuum          = new nu::mesh (MESH);                           // False vacuum domain.
-  size_t                           nodes;                                                           // Number of nodes.
-  size_t                           elements;                                                        // Number of elements.
-  size_t                           groups;                                                          // Number of groups.
-  size_t                           neighbours;                                                      // Number of neighbours.
-  std::vector<size_t>              side_x;                                                          // Nodes on "x" side.
-  std::vector<size_t>              side_y;                                                          // Nodes on "y" side.
-  std::vector<GLint>               border;                                                          // Nodes on border.
-  size_t                           side_x_nodes;                                                    // Number of nodes in "x" direction [#].
-  size_t                           side_y_nodes;                                                    // Number of nodes in "x" direction [#].
-  size_t                           border_nodes;                                                    // Number of border nodes.
-  float                            x_min       = -1.0f;                                             // "x_min" spatial boundary [m].
-  float                            x_max       = +1.0f;                                             // "x_max" spatial boundary [m].
-  float                            y_min       = -1.0f;                                             // "y_min" spatial boundary [m].
-  float                            y_max       = +1.0f;                                             // "y_max" spatial boundary [m].
-  float                            dx;                                                              // x-axis mesh spatial size [m].
-  float                            dy;                                                              // y-axis mesh spatial size [m].
+  nu::mesh*           vacuum          = new nu::mesh (MESH);                                        // False vacuum domain.
+  size_t              nodes;                                                                        // Number of nodes.
+  size_t              elements;                                                                     // Number of elements.
+  size_t              groups;                                                                       // Number of groups.
+  size_t              neighbours;                                                                   // Number of neighbours.
+  std::vector<size_t> side_x;                                                                       // Nodes on "x" side.
+  std::vector<size_t> side_y;                                                                       // Nodes on "y" side.
+  std::vector<GLint>  border;                                                                       // Nodes on border.
+  size_t              side_x_nodes;                                                                 // Number of nodes in "x" direction [#].
+  size_t              side_y_nodes;                                                                 // Number of nodes in "x" direction [#].
+  size_t              border_nodes;                                                                 // Number of border nodes.
+  float               x_min       = -1.0f;                                                          // "x_min" spatial boundary [m].
+  float               x_max       = +1.0f;                                                          // "x_max" spatial boundary [m].
+  float               y_min       = -1.0f;                                                          // "y_min" spatial boundary [m].
+  float               y_max       = +1.0f;                                                          // "y_max" spatial boundary [m].
+  float               dx;                                                                           // x-axis mesh spatial size [m].
+  float               dy;                                                                           // y-axis mesh spatial size [m].
 
   // SIMULATION VARIABLES:
-  float                            Hx          = HX_INIT;                                           // Longitudinal magnetic field.
-  float                            Hz          = HZ_INIT;                                           // Transverse magnetic field.
-  float                            T           = T_INIT;                                            // Temperature.
-  float                            alpha       = ALPHA_INIT;                                        // Radial exponent.
-  float                            theta_angle = THETA_INIT;                                        // Theta angle.
-  float                            spin_z_avg  = 0.0f;                                              // Average z-spin.
-  float                            spin_z_std  = 0.0f;                                              // Standard deviation z-spin.
-  float                            dt_simulation;                                                   // Simulation time step [s].
-
-  // BACKUP:
-  std::vector<nu_float4_structure> initial_position;                                                // Backing up initial data...
-  std::vector<float>               initial_theta;                                                   // Backing up initial data...
-  std::vector<float>               initial_theta_int;                                               // Backing up initial data...
+  float               Hx          = HX_INIT;                                                        // Longitudinal magnetic field.
+  float               Hz          = HZ_INIT;                                                        // Transverse magnetic field.
+  float               T           = T_INIT;                                                         // Temperature.
+  float               alpha       = ALPHA_INIT;                                                     // Radial exponent.
+  float               theta_angle = THETA_INIT;                                                     // Theta angle.
+  float               spin_z_avg  = 0.0f;                                                           // Average z-spin.
+  float               spin_z_std  = 0.0f;                                                           // Standard deviation z-spin.
+  float               dt_simulation;                                                                // Simulation time step [s].
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////// DATA INITIALIZATION //////////////////////////////////////
@@ -322,11 +317,6 @@ int main ()
   radial_exponent->data.push_back (alpha);                                                          // Setting radial exponent...
   ds->data.push_back (dx);                                                                          // Setting mesh side...
 
-  // SETTING INITIAL DATA BACKUP:
-  initial_position  = position->data;                                                               // Setting backup data...
-  initial_theta     = theta->data;                                                                  // Setting backup data...
-  initial_theta_int = theta_int->data;                                                              // Setting backup data...
-
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////// OPENCL KERNELS INITIALIZATION /////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -390,8 +380,7 @@ int main ()
     ImGui::SameLine ();                                                                             // Staying on same line...
     ImGui::Text ("[rad] ");                                                                         // Writing text...
     ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::SliderFloat (" = theta ", &theta_angle, 0.0f, 2.0f*M_PI);
-    //ImGui::InputFloat (" = theta ", &theta_angle);                                                  // Adding input field...
+    ImGui::SliderFloat (" = theta ", &theta_angle, 0.0f, 2.0f*M_PI);                                // Adding input field...
 
     ImGui::PushStyleColor (ImGuiCol_Text, IM_COL32 (0,255,0,255));                                  // Setting text color...
     ImGui::Text ("Temperature:                       ");                                            // Writing text...
@@ -434,61 +423,39 @@ int main ()
       radial_exponent->data[0] = alpha;                                                             // Setting radial exponent...
       dt->data[0]              = dt_simulation;                                                     // Setting simulation time step...
 
-      // RESETTING NEUTRINO ARRAYS ("surface" depending):
-      for(i = 0; i < nodes; i++)
-      {
-        // NODE PROPERTIES:
-        //mass->data[i] = m;                                                                          // Setting mass...
-
-        // Computing minimum element offset index:
-        if(i == 0)
-        {
-          j_min = 0;                                                                                // Setting minimum element offset index...
-        }
-        else
-        {
-          j_min = offset->data[i - 1];                                                              // Setting minimum element offset index...
-        }
-
-        j_max = offset->data[i];                                                                    // Setting maximum element offset index...
-
-        for(j = j_min; j < j_max; j++)
-        {
-          // LINK PROPERTIES:
-          //stiffness->data[j] = K;                                                                   // Setting link stiffness...
-        }
-      }
-
-      cl->write (10);                                                                               // Writing OpenCL data...
-      cl->write (11);                                                                               // Writing OpenCL data...
-      cl->write (12);                                                                               // Writing OpenCL data...
-      cl->write (17);                                                                               // Writing OpenCL data...
-      cl->write (18);                                                                               // Writing OpenCL data...
+      cl->write (10);                                                                               // Updating longitudinal magnetic field...
+      cl->write (11);                                                                               // Updating transverse magnetic field...
+      cl->write (12);                                                                               // Updating temperature...
+      cl->write (17);                                                                               // Updating mesh side...
+      cl->write (18);                                                                               // Updating time step [s]...
     }
 
     ImGui::SameLine (100);
 
     if(ImGui::Button ("(R)estart") || gl->button_TRIANGLE || gl->key_R)
     {
-      position->data = initial_position;                                                            // Restoring backup...
+      // UPDATING PHYSICAL PARAMETERS:
+      longitudinal_H->data[0]  = Hx;                                                                // Setting longitudinal magnetic field...
+      transverse_H->data[0]    = Hz;                                                                // Setting transverse magnetic field...
+      temperature->data[0]     = T;                                                                 // Setting temperature...
+      radial_exponent->data[0] = alpha;                                                             // Setting radial exponent...
+      dt->data[0]              = dt_simulation;                                                     // Setting simulation time step...
+
+      cl->write (10);                                                                               // Updating longitudinal magnetic field...
+      cl->write (11);                                                                               // Updating transverse magnetic field...
+      cl->write (12);                                                                               // Updating temperature...
+      cl->write (17);                                                                               // Updating mesh side...
+      cl->write (18);                                                                               // Updating time step [s]...
 
       // Resetting theta for all nodes:
       for(i = 0; i < nodes; i++)
       {
-        std::cout << "i = " << i << ", node index = " << vacuum->node[i] << std::endl;              // Printing message...
-
-        color->data.clear ();                                                                       // Clearing color vector...
-        theta->data.clear ();                                                                       // Clearing theta vector...
-        theta_int->data.clear ();                                                                   // Clearing theta (intermediate) vector...
-
-        color->data.push_back ({0.0f, 1.0f, 0.0f, 1.0f});                                           // Setting node color...
-        theta->data.push_back (theta_angle);                                                        // Setting initial theta...
-        theta_int->data.push_back (0.0f);                                                           // Setting initial theta (intermediate value)...
+        theta->data[i]     = theta_angle;                                                           // Setting initial theta...
+        theta_int->data[i] = 0.0f;                                                                  // Setting initial theta (intermediate value)...
       }
 
-      cl->write (1);                                                                                // Writing data...
-      cl->write (5);                                                                                // Writing data...
-      cl->write (6);                                                                                // Writing data...
+      cl->write (5);                                                                                // Updating theta...
+      cl->write (6);                                                                                // Updating theta (intermediate)...
     }
 
     ImGui::SameLine (200);
