@@ -34,12 +34,14 @@
   #define SHADER_HOME "../../Code/shader/"                                                          // Linux OpenGL shaders directory.
   #define KERNEL_HOME "../../Code/kernel/"                                                          // Linux OpenCL kernels directory.
   #define GMSH_HOME   "../../Code/mesh/"                                                            // Linux GMSH mesh directory.
+  #define LOG_HOME    "../../log/"                                                                  // Linux log directory.
 #endif
 
 #ifdef WIN32
   #define SHADER_HOME "..\\..\\Code\\shader\\"                                                      // Windows OpenGL shaders directory.
   #define KERNEL_HOME "..\\..\\Code\\kernel\\"                                                      // Windows OpenCL kernels directory.
-  #define GMSH_HOME   "..\\..\\Code\\mesh\\"                                                        // Linux GMSH mesh directory.
+  #define GMSH_HOME   "..\\..\\Code\\mesh\\"                                                        // Windows GMSH mesh directory.
+  #define LOG_HOME    "..\\..\\log\\"                                                               // Windows log directory.
 #endif
 
 #define SHADER_VERT   "voxel_vertex.vert"                                                           // OpenGL vertex shader.
@@ -56,6 +58,9 @@
 
 // INCLUDES:
 #include "nu.hpp"                                                                                   // Neutrino's header file.
+#include <iostream>
+#include <fstream>
+#include <ctime>
 
 // utility structure for realtime plot
 struct ScrollingBuffer
@@ -226,6 +231,9 @@ int main ()
   float               spin_z_std  = 0.0f;                                                           // Standard deviation z-spin.
   float               dt_simulation;                                                                // Simulation time step [s].
 
+  // DATA LOG:
+  std::ofstream       logfile;
+
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////// DATA INITIALIZATION //////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -352,6 +360,17 @@ int main ()
   cl->acquire ();                                                                                   // Acquiring OpenCL kernel...
   cl->execute (K0, nu::WAIT);                                                                       // Executing OpenCL kernel...
   cl->release ();                                                                                   // Releasing OpenCL kernel...
+
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////// INITIALIZING LOG FILE //////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  time_t      file_time = time (0);
+  struct tm*  now       = localtime (&file_time);
+  char        time_text [80];
+  std::string file_name = LOG_HOME;
+  strftime (time_text, 80,"data_%Y-%b-%d_%H-%M-%S.txt", now);
+  file_name += time_text;
+  logfile.open (file_name);                                                                         // Opening data log file...
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////// APPLICATION LOOP ////////////////////////////////////////
@@ -499,9 +518,13 @@ int main ()
 
     ImGui::End ();                                                                                  // Finishing window...
 
+    logfile << "spin_z_avg = " << spin_z_avg << "; spin_z_std = " << spin_z_std << "\n";            // Logging data...
+
     gl->end ();                                                                                     // Ending gl...
     cl->get_toc ();                                                                                 // Getting "toc" [us]...
   }
+
+  logfile.close ();                                                                                 // Closing data log file...
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////// CLEANUP ////////////////////////////////////////////
