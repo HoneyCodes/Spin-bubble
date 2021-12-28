@@ -355,7 +355,7 @@ int main ()
       cl->write (18);                                                                               // Updating time step [s]...
     }
 
-    ImGui::SameLine (100);
+    hud->sameline (100);
 
     if(hud->button ("(R)estart") || gl->button_TRIANGLE || gl->key_R)
     {
@@ -383,21 +383,21 @@ int main ()
       cl->write (6);                                                                                // Updating theta (intermediate)...
     }
 
-    ImGui::SameLine (200);
+    hud->sameline (200);
 
     if(hud->button ("(M)onocular") || gl->key_M)
     {
       proj_mode = nu::MONOCULAR;                                                                    // Setting monocular projection...
     }
 
-    ImGui::SameLine (300);
+    hud->sameline (300);
 
     if(hud->button ("(B)inocular") || gl->key_B)
     {
       proj_mode = nu::BINOCULAR;                                                                    // Setting binocular projection...
     }
 
-    ImGui::SameLine (400);
+    hud->sameline (400);
 
     if(hud->button ("(E)xit") || gl->button_CIRCLE || gl->key_E)
     {
