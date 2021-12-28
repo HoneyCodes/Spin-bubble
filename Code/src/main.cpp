@@ -62,96 +62,6 @@
 #include <fstream>
 #include <ctime>
 
-// utility structure for realtime plot
-struct ScrollingBuffer
-{
-  int MaxSize;
-  int Offset;
-  ImVector<ImVec2> Data;
-
-  ScrollingBuffer(
-                  int max_size = 2000
-                 )
-  {
-    MaxSize = max_size;
-    Offset  = 0;
-    Data.reserve (MaxSize);
-  }
-
-  void AddPoint (
-                 float x,
-                 float y
-                )
-  {
-    if(Data.size () < MaxSize)
-    {
-      Data.push_back (ImVec2 (x,y));
-    }
-
-    else
-    {
-      Data[Offset] = ImVec2 (x,y);
-      Offset       = (Offset + 1) % MaxSize;
-    }
-  }
-
-  void Erase ()
-  {
-    if(Data.size () > 0)
-    {
-      Data.shrink (0);
-      Offset = 0;
-    }
-  }
-};
-
-void RealtimePlot (
-                   float mean,
-                   float std
-                  )
-{
-  static ScrollingBuffer data_avg;
-  static ScrollingBuffer data_std_up;
-  static ScrollingBuffer data_std_down;
-  static float           t       = 0;
-  static float           history = 10.0f;
-  ImGui::SliderFloat ("History", &history, 1, 30, "%.1f s");
-  static ImPlotAxisFlags flags   = ImPlotAxisFlags_AutoFit;
-
-  t += ImGui::GetIO ().DeltaTime;
-  data_avg.AddPoint (t, mean);
-  data_std_up.AddPoint (t, mean + std);
-  data_std_down.AddPoint (t, mean - std);
-
-  if(ImPlot::BeginPlot ("##Scrolling", ImVec2 (-1,150)))
-  {
-    ImPlot::SetupAxes ("time [s]", "spin-z []", flags, flags);
-    ImPlot::SetupAxisLimits (ImAxis_X1, t - history, t, ImGuiCond_Always);
-    ImPlot::SetupAxisLimits (ImAxis_Y1, -1, 1);
-    ImPlot::SetNextFillStyle (IMPLOT_AUTO_COL, 0.5f);
-    ImPlot::PlotShaded (
-                        "std(sz)",
-                        &data_avg.Data[0].x,
-                        &data_std_up.Data[0].y,
-                        &data_std_down.Data[0].y,
-                        data_avg.Data.size (),
-                        data_avg.Offset,
-                        2*sizeof(float)
-                       );
-    ImPlot::PlotLine (
-                      "avg(sz)",
-                      &data_avg.Data[0].x,
-                      &data_avg.Data[0].y,
-                      data_avg.Data.size (),
-                      data_avg.Offset,
-                      2*sizeof(float)
-                     );
-
-    ImPlot::EndPlot ();
-  }
-
-}
-
 int main ()
 {
   // INDICES:
@@ -202,6 +112,9 @@ int main ()
   nu::float1*         ds              = new nu::float1 (17);                                        // Mesh side.
   nu::float1*         dt              = new nu::float1 (18);                                        // Time step [s].
 
+  // IMGUI:
+  nu::imgui*          hud             = new nu::imgui ();                                           // ImGui context.
+
   // MESH:
   nu::mesh*           vacuum          = new nu::mesh (MESH);                                        // False vacuum domain.
   size_t              nodes;                                                                        // Number of nodes.
@@ -214,21 +127,21 @@ int main ()
   size_t              side_x_nodes;                                                                 // Number of nodes in "x" direction [#].
   size_t              side_y_nodes;                                                                 // Number of nodes in "x" direction [#].
   size_t              border_nodes;                                                                 // Number of border nodes.
-  float               x_min       = -1.0f;                                                          // "x_min" spatial boundary [m].
-  float               x_max       = +1.0f;                                                          // "x_max" spatial boundary [m].
-  float               y_min       = -1.0f;                                                          // "y_min" spatial boundary [m].
-  float               y_max       = +1.0f;                                                          // "y_max" spatial boundary [m].
+  float               x_min         = -1.0f;                                                        // "x_min" spatial boundary [m].
+  float               x_max         = +1.0f;                                                        // "x_max" spatial boundary [m].
+  float               y_min         = -1.0f;                                                        // "y_min" spatial boundary [m].
+  float               y_max         = +1.0f;                                                        // "y_max" spatial boundary [m].
   float               dx;                                                                           // x-axis mesh spatial size [m].
   float               dy;                                                                           // y-axis mesh spatial size [m].
 
   // SIMULATION VARIABLES:
-  float               Hx          = HX_INIT;                                                        // Longitudinal magnetic field.
-  float               Hz          = HZ_INIT;                                                        // Transverse magnetic field.
-  float               T           = T_INIT;                                                         // Temperature.
-  float               alpha       = ALPHA_INIT;                                                     // Radial exponent.
-  float               theta_angle = THETA_INIT;                                                     // Theta angle.
-  float               spin_z_avg  = 0.0f;                                                           // Average z-spin.
-  float               spin_z_std  = 0.0f;                                                           // Standard deviation z-spin.
+  float               Hx            = HX_INIT;                                                      // Longitudinal magnetic field.
+  float               Hz            = HZ_INIT;                                                      // Transverse magnetic field.
+  float               T             = T_INIT;                                                       // Temperature.
+  float               alpha         = ALPHA_INIT;                                                   // Radial exponent.
+  float               theta_angle   = THETA_INIT;                                                   // Theta angle.
+  float               spin_z_avg    = 0.0f;                                                         // Average z-spin.
+  float               spin_z_stderr = 0.0f;                                                         // Standard error z-spin.
   float               dt_simulation;                                                                // Simulation time step [s].
 
   // DATA LOG:
@@ -365,10 +278,11 @@ int main ()
   /////////////////////////////////////// INITIALIZING LOG FILE //////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   time_t      file_time = time (0);
-  struct tm*  now       = localtime (&file_time);
+  struct tm   now;
   char        time_text [80];
+  localtime_s (&now, &file_time);
   std::string file_name = LOG_HOME;
-  strftime (time_text, 80,"data_%Y-%b-%d_%H-%M-%S.txt", now);
+  strftime (time_text, 80,"data_%Y-%b-%d_%H-%M-%S.txt", &now);
   file_name += time_text;
   logfile.open (file_name);                                                                         // Opening data log file...
 
@@ -390,50 +304,42 @@ int main ()
     gl->gamepad_navigation (gmp_orbit_rate, gmp_pan_rate, gmp_decaytime, gmp_deadzone);             // Polling gamepad...
     gl->plot (S, proj_mode);                                                                        // Plotting shared arguments...
 
-    ImGui::Begin ("FALSE VACUUM PARAMETERS", NULL, ImGuiWindowFlags_AlwaysAutoResize);              // Beginning window...
-    ImGui::PushItemWidth (200);                                                                     // Setting window width [px]...
+    hud->begin ();                                                                                  // Beginning HUD...
+    hud->window ("FALSE VACUUM PARAMETERS", 200);                                                   // Creating window...
+    hud->slider (
+                 "Angle:                             ",
+                 "[rad] ",
+                 " = theta ",
+                 &theta_angle,
+                 0.0f,
+                 2.0f*M_PI
+                );
+    hud->parameter (
+                    "Temperature:                       ",
+                    "[K]   ",
+                    "T",
+                    &T
+                   );
+    hud->parameter (
+                    "Radial exponent:                   ",
+                    "[]    ",
+                    "alpha",
+                    &alpha
+                   );
+    hud->parameter (
+                    "Longitudinal magnetic field:       ",
+                    "[T]   ",
+                    "Hx",
+                    &Hx
+                   );
+    hud->parameter (
+                    "Transverse magnetic field:         ",
+                    "[T]   ",
+                    "Hz",
+                    &Hz
+                   );
 
-    ImGui::PushStyleColor (ImGuiCol_Text, IM_COL32 (0,255,0,255));                                  // Setting text color...
-    ImGui::Text ("Angle:                             ");                                            // Writing text...
-    ImGui::PopStyleColor ();                                                                        // Restoring text color...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::Text ("[rad] ");                                                                         // Writing text...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::SliderFloat (" = theta ", &theta_angle, 0.0f, 2.0f*M_PI);                                // Adding input field...
-
-    ImGui::PushStyleColor (ImGuiCol_Text, IM_COL32 (0,255,0,255));                                  // Setting text color...
-    ImGui::Text ("Temperature:                       ");                                            // Writing text...
-    ImGui::PopStyleColor ();                                                                        // Restoring text color...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::Text ("[K]   ");                                                                         // Writing text...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::InputFloat (" = T ", &T);                                                                // Adding input field...
-
-    ImGui::PushStyleColor (ImGuiCol_Text, IM_COL32 (0,255,0,255));                                  // Setting text color...
-    ImGui::Text ("Radial exponent:                   ");                                            // Writing text...
-    ImGui::PopStyleColor ();                                                                        // Restoring text color...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::Text ("[]    ");                                                                         // Writing text...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::InputFloat (" = alpha ", &alpha);                                                        // Adding input field...
-
-    ImGui::PushStyleColor (ImGuiCol_Text, IM_COL32 (0,255,0,255));                                  // Setting text color...
-    ImGui::Text ("Longitudinal magnetic field:       ");                                            // Writing text...
-    ImGui::PopStyleColor ();                                                                        // Restoring text color...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::Text ("[T]   ");                                                                         // Writing text...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::InputFloat (" = Hx", &Hx);                                                               // Adding input field...
-
-    ImGui::PushStyleColor (ImGuiCol_Text, IM_COL32 (0,255,0,255));                                  // Setting text color...
-    ImGui::Text ("Transverse magnetic field:         ");                                            // Writing text...
-    ImGui::PopStyleColor ();                                                                        // Restoring text color...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::Text ("[T]   ");                                                                         // Writing text...
-    ImGui::SameLine ();                                                                             // Staying on same line...
-    ImGui::InputFloat (" = Hz", &Hz);                                                               // Adding input field...
-
-    if(ImGui::Button ("(U)pdate") || gl->key_U)
+    if(hud->button ("(U)pdate") || gl->key_U)
     {
       // UPDATING PHYSICAL PARAMETERS:
       longitudinal_H->data[0]  = Hx;                                                                // Setting longitudinal magnetic field...
@@ -451,7 +357,7 @@ int main ()
 
     ImGui::SameLine (100);
 
-    if(ImGui::Button ("(R)estart") || gl->button_TRIANGLE || gl->key_R)
+    if(hud->button ("(R)estart") || gl->button_TRIANGLE || gl->key_R)
     {
       // UPDATING PHYSICAL PARAMETERS:
       longitudinal_H->data[0]  = Hx;                                                                // Setting longitudinal magnetic field...
@@ -479,46 +385,45 @@ int main ()
 
     ImGui::SameLine (200);
 
-    if(ImGui::Button ("(M)onocular") || gl->key_M)
+    if(hud->button ("(M)onocular") || gl->key_M)
     {
       proj_mode = nu::MONOCULAR;                                                                    // Setting monocular projection...
     }
 
     ImGui::SameLine (300);
 
-    if(ImGui::Button ("(B)inocular") || gl->key_B)
+    if(hud->button ("(B)inocular") || gl->key_B)
     {
       proj_mode = nu::BINOCULAR;                                                                    // Setting binocular projection...
     }
 
     ImGui::SameLine (400);
 
-    if(ImGui::Button ("(E)xit") || gl->button_CIRCLE || gl->key_E)
+    if(hud->button ("(E)xit") || gl->button_CIRCLE || gl->key_E)
     {
       gl->close ();                                                                                 // Closing gl...
     }
 
     cl->read (15);                                                                                  // Reading spin_z_row_sum...
     cl->read (16);                                                                                  // Reading spin_z2_row_sum...
-    spin_z_avg  = 0.0f;                                                                             // Resetting z-spin average...
-    spin_z_std  = 0.0f;                                                                             // Resetting z-spin standard deviation...
+    spin_z_avg    = 0.0f;                                                                           // Resetting z-spin average...
+    spin_z_stderr = 0.0f;                                                                           // Resetting z-spin standard error...
 
     for(i = 0; i < side_y_nodes; i++)
     {
-      spin_z_avg += spin_z_row_sum->data[i];                                                        // Summating spin_z_row_sum by rows...
-      spin_z_std += spin_z2_row_sum->data[i];                                                       // Summating spin_z2_row_sum by rows...
+      spin_z_avg    += spin_z_row_sum->data[i];                                                     // Summating spin_z_row_sum by rows...
+      spin_z_stderr += spin_z2_row_sum->data[i];                                                    // Summating spin_z2_row_sum by rows...
     }
 
-    spin_z_avg /= nodes;                                                                            // Computing z-spin average...
-    spin_z_std  = (float)sqrt (spin_z_std/nodes - pow (spin_z_avg, 2));                             // Computing z-spin standard deviation...
+    spin_z_avg   /= nodes;                                                                          // Computing z-spin average...
+    spin_z_stderr = (float)sqrt (spin_z_stderr/nodes - pow (spin_z_avg, 2))/(float)sqrt (nodes);    // Computing z-spin standard deviation...
 
-    std::cout << "avg = " << spin_z_avg << " std = " << spin_z_std << std::endl;
+    hud->plot ("spin_z_avg", "<sz>", "stderr(sz)", spin_z_avg, spin_z_stderr);                      // Plotting average spin-z and its standard deviation...
 
-    RealtimePlot (spin_z_avg, spin_z_std);                                                          // Plotting average spin-z and its standard deviation...
+    hud->finish ();                                                                                 // Finishing window...
+    hud->end ();                                                                                    // Ending HUD...
 
-    ImGui::End ();                                                                                  // Finishing window...
-
-    logfile << "spin_z_avg = " << spin_z_avg << "; spin_z_std = " << spin_z_std << "\n";            // Logging data...
+    logfile << "spin_z_avg = " << spin_z_avg << "; spin_z_stderr = " << spin_z_stderr << "\n";      // Logging data...
 
     gl->end ();                                                                                     // Ending gl...
     cl->get_toc ();                                                                                 // Getting "toc" [us]...
@@ -553,6 +458,7 @@ int main ()
   delete K2;                                                                                        // Deleting OpenCL kernel...
   delete K3;                                                                                        // Deleting OpenCL kernel...
   delete vacuum;                                                                                    // deleting vacuum mesh...
+  delete hud;
 
   return 0;
 }
