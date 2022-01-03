@@ -53,14 +53,14 @@
 #define KERNEL_3      "thekernel_3.cl"                                                              // OpenCL kernel source.
 #define UTILITIES     "utilities.cl"                                                                // OpenCL utilities source.
 #define MESH_FILE     "Periodic_square.msh"                                                         // GMSH mesh.
-//#define MESH_FILE     "Periodic_segment.msh"                                                           // GMSH mesh.
 #define MESH          GMSH_HOME MESH_FILE                                                           // GMSH mesh (full path).
+#define LOG_FILE      "Data"                                                                        // Log file name.
+#define LOG_HEADER    "Spin bubble."                                                                // Log file header.
+#define LOG_EXTENSION "txt"                                                                         // Log file extension.
+#define LOG           LOG_HOME LOG_FILE                                                             // Log file name (full name, timestamp and extension to be added).
 
 // INCLUDES:
 #include "nu.hpp"                                                                                   // Neutrino's header file.
-#include <iostream>
-#include <fstream>
-#include <ctime>
 
 int main ()
 {
@@ -145,7 +145,7 @@ int main ()
   float               dt_simulation;                                                                // Simulation time step [s].
 
   // DATA LOG:
-  std::ofstream       logfile;
+  nu::logfile*        log           = new nu::logfile ();                                           // Log file.
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////// DATA INITIALIZATION //////////////////////////////////////
@@ -275,16 +275,9 @@ int main ()
   cl->release ();                                                                                   // Releasing OpenCL kernel...
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
-  /////////////////////////////////////// INITIALIZING LOG FILE //////////////////////////////////////
+  /////////////////////////////////////// OPENING DATA LOG FILE //////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////
-  time_t      file_time = time (0);
-  struct tm   now;
-  char        time_text [80];
-  localtime_s (&now, &file_time);
-  std::string file_name = LOG_HOME;
-  strftime (time_text, 80,"data_%Y-%b-%d_%H-%M-%S.txt", &now);
-  file_name += time_text;
-  logfile.open (file_name);                                                                         // Opening data log file...
+  log->open (LOG, LOG_EXTENSION, LOG_HEADER, nu::TIMESTAMP);                                        // Opening data log file...
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////// APPLICATION LOOP ////////////////////////////////////////
@@ -423,19 +416,25 @@ int main ()
     hud->finish ();                                                                                 // Finishing window...
     hud->end ();                                                                                    // Ending HUD...
 
-    logfile << "spin_z_avg = " << spin_z_avg << "; spin_z_stderr = " << spin_z_stderr << "\n";      // Logging data...
+    log->write ("spin_z_avg", spin_z_avg);                                                          // Logging data...
+    log->write ("spin_z_stderr", spin_z_stderr);                                                    // Logging data...
+    log->endline ();                                                                                // Ending log line...
 
     gl->end ();                                                                                     // Ending gl...
     cl->get_toc ();                                                                                 // Getting "toc" [us]...
   }
 
-  logfile.close ();                                                                                 // Closing data log file...
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////// CLOSING DATA LOG FILE //////////////////////////////////////
+  ////////////////////////////////////////////////////////////////////////////////////////////////////
+  log->close ();                                                                                    // Closing data log file...
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////// CLEANUP ////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   delete cl;                                                                                        // Deleting OpenCL context...
   delete gl;                                                                                        // Deleting OpenGL context...
+  delete hud;                                                                                       // Deleting HUD context...
   delete S;                                                                                         // Deleting shader...
   delete color;                                                                                     // Deleting color data...
   delete position;                                                                                  // Deleting position data...
@@ -457,8 +456,8 @@ int main ()
   delete K1;                                                                                        // Deleting OpenCL kernel...
   delete K2;                                                                                        // Deleting OpenCL kernel...
   delete K3;                                                                                        // Deleting OpenCL kernel...
-  delete vacuum;                                                                                    // deleting vacuum mesh...
-  delete hud;
+  delete vacuum;                                                                                    // Deleting vacuum mesh...
+  delete log;                                                                                       // Deleting log file object...
 
   return 0;
 }
