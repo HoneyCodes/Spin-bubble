@@ -3,7 +3,7 @@
 #define INTEROP       true                                                                          // "true" = use OpenGL-OpenCL interoperability.
 #define SX            800                                                                           // Window x-size [px].
 #define SY            600                                                                           // Window y-size [px].
-#define NAME          "Neutrino - Spin-bubble"                                                      // Window name.
+#define NM            "Neutrino - Spin-bubble"                                                      // Window name.
 #define OX            0.0f                                                                          // x-axis orbit initial rotation.
 #define OY            0.0f                                                                          // y-axis orbit initial rotation.
 #define PX            0.0f                                                                          // x-axis pan initial translation.
@@ -82,7 +82,7 @@ int main ()
   float               gmp_deadzone    = 0.30f;                                                      // Gamepad joystick deadzone [0...1].
 
   // OPENGL:
-  nu::opengl*         gl              = new nu::opengl (NAME,SX,SY,OX,OY,PX,PY,PZ);                 // OpenGL context.
+  nu::opengl*         gl              = new nu::opengl (NM, SX, SY, OX, OY, PX, PY, PZ);            // OpenGL context.
   nu::shader*         S               = new nu::shader ();                                          // OpenGL shader program.
   nu::projection_mode proj_mode       = nu::MONOCULAR;                                              // OpenGL projection mode.
 
@@ -302,37 +302,17 @@ int main ()
     hud->slider (
                  "Angle:                             ",
                  "[rad] ",
-                 " = theta ",
+                 "theta ",
                  &theta_angle,
                  0.0f,
                  2.0f*M_PI
                 );
-    hud->parameter (
-                    "Temperature:                       ",
-                    "[K]   ",
-                    "T",
-                    &T
-                   );
-    hud->parameter (
-                    "Radial exponent:                   ",
-                    "[]    ",
-                    "alpha",
-                    &alpha
-                   );
-    hud->parameter (
-                    "Longitudinal magnetic field:       ",
-                    "[T]   ",
-                    "Hx",
-                    &Hx
-                   );
-    hud->parameter (
-                    "Transverse magnetic field:         ",
-                    "[T]   ",
-                    "Hz",
-                    &Hz
-                   );
+    hud->input ("Temperature:                       ", "[K]   ", "T", &T);
+    hud->input ("Radial exponent:                   ", "[]    ", "alpha", &alpha);
+    hud->input ("Longitudinal magnetic field:       ", "[T]   ", "Hx", &Hx);
+    hud->input ("Transverse magnetic field:         ", "[T]   ", "Hz", &Hz);
 
-    if(hud->button ("(U)pdate") || gl->key_U)
+    if(hud->button ("(U)pdate", 100) || gl->key_U)
     {
       // UPDATING PHYSICAL PARAMETERS:
       longitudinal_H->data[0]  = Hx;                                                                // Setting longitudinal magnetic field...
@@ -348,9 +328,9 @@ int main ()
       cl->write (18);                                                                               // Updating time step [s]...
     }
 
-    hud->sameline (100);
+    hud->space (50);
 
-    if(hud->button ("(R)estart") || gl->button_TRIANGLE || gl->key_R)
+    if(hud->button ("(R)estart", 100) || gl->button_TRIANGLE || gl->key_R)
     {
       // UPDATING PHYSICAL PARAMETERS:
       longitudinal_H->data[0]  = Hx;                                                                // Setting longitudinal magnetic field...
@@ -376,23 +356,23 @@ int main ()
       cl->write (6);                                                                                // Updating theta (intermediate)...
     }
 
-    hud->sameline (200);
+    hud->space (50);
 
-    if(hud->button ("(M)onocular") || gl->key_M)
+    if(hud->button ("(M)onocular", 100) || gl->key_M)
     {
       proj_mode = nu::MONOCULAR;                                                                    // Setting monocular projection...
     }
 
-    hud->sameline (300);
+    hud->space (50);
 
-    if(hud->button ("(B)inocular") || gl->key_B)
+    if(hud->button ("(B)inocular", 100) || gl->key_B)
     {
       proj_mode = nu::BINOCULAR;                                                                    // Setting binocular projection...
     }
 
-    hud->sameline (400);
+    hud->space (50);
 
-    if(hud->button ("(E)xit") || gl->button_CIRCLE || gl->key_E)
+    if(hud->button ("(E)xit", 100) || gl->button_CIRCLE || gl->key_E)
     {
       gl->close ();                                                                                 // Closing gl...
     }
@@ -411,7 +391,7 @@ int main ()
     spin_z_avg   /= nodes;                                                                          // Computing z-spin average...
     spin_z_stderr = (float)sqrt (spin_z_stderr/nodes - pow (spin_z_avg, 2))/(float)sqrt (nodes);    // Computing z-spin standard deviation...
 
-    hud->plot ("spin_z_avg", "<sz>", "stderr(sz)", spin_z_avg, spin_z_stderr);                      // Plotting average spin-z and its standard deviation...
+    hud->plot ("spin_z_avg", "<sz>", "stderr(sz)", spin_z_avg, spin_z_stderr, 0.1f);                // Plotting average spin-z and its standard deviation...
 
     hud->finish ();                                                                                 // Finishing window...
     hud->end ();                                                                                    // Ending HUD...
