@@ -23,22 +23,17 @@ float E_neighbour(float C_radial, float theta_neighbour, float theta_central)
 __kernel void thekernel(__global float4*    color,                              // Color.
                         __global float4*    position,                           // Position.
                         __global int*       central,                            // Node.
-                        __global int*       nearest,                            // Neighbour.
+                        __global int*       neighbour,                          // Neighbour.
                         __global int*       offset,                             // Offset. 
                         __global float*     theta,                              // Theta.  
                         __global float*     theta_int,                          // Theta (intermediate value). 
                         __global int4*      state_theta,                        // Random number generator state.
                         __global int4*      state_threshold,                    // Random number generator state. 
-                        __global int*       max_rejections,                     // Maximum allowed number of rejections. 
-                        __global float*     longitudinal_H,                     // Longitudinal magnetic field.
-                        __global float*     transverse_H,                       // Transverse magnetic field.
-                        __global float*     temperature,                        // Temperature.
-                        __global float*     radial_exponent,                    // Radial exponent.
-                        __global int*       rows,                               // Number of rows in mesh.
                         __global float*     spin_z_row_sum,                     // z-spin row summation.
                         __global float*     spin_z2_row_sum,                    // z-spin square row summation.
-                        __global float*     ds_simulation,                      // Mesh side.
-                        __global float*     dt_simulation)                      // Simulation time step.
+                        __global int*       m_overflow,                         // Rejection sampling overflow.
+                        __global int*       m_overflow_sum,                     // Rejection sampling overflow sum.
+                        __global float*     parameter)                          // Parameters.
 { 
   ////////////////////////////////////////////////////////////////////////////////
   //////////////////////////////////// INDICES ///////////////////////////////////
@@ -54,25 +49,26 @@ __kernel void thekernel(__global float4*    color,                              
   ////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////// CELL VARIABLES //////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////
+  float4       c                 = color[n];                                    // Node color.
   float4       p                 = position[n];                                 // Central node position.
-  float4       neighbour         = (float4)(0.0f, 0.0f, 0.0f, 1.0f);            // Neighbour node position.
-  float2       link              = (float2)(0.0f, 0.0f);                        // Neighbour link.
-  float        L                 = 0.0f;                                        // Neighbour link length.
-  float        dt                = dt_simulation[0];                            // Simulation time step [s].
-  float        ds                = ds_simulation[0];                            // Simulation space step.
   uint4        st_theta          = convert_uint4(state_theta[n]);               // Random generator state.
   uint4        st_threshold      = convert_uint4(state_threshold[n]);           // Random generator state.
-  float        Hx                = longitudinal_H[0];                           // Longitudinal magnetic field.
-  float        Hz                = transverse_H[0];                             // Transverse magnetic field.
+  float        alpha             = parameter[0];                                // Radial exponent parameter...
+  float        T                 = parameter[1];                                // Temperature parameter...
+  float        Hx                = parameter[2];                                // Longitudinal magnetic field parameter...
+  float        Hz                = parameter[3];                                // Transverse magnetic field parameter...
+  uint         m_max             = (uint)parameter[4];                          // Maximum allowed number of rejections parameter...
+  uint         columns           = (uint)parameter[5];                          // Number of mesh columns parameter...
+  float        ds                = parameter[6];                                // Simulation spatial step parameter [m].
+  float        dt                = parameter[7];                                // Simulation time step parameter [s].
+  float4       node              = (float4)(0.0f, 0.0f, 0.0f, 1.0f);            // Neighbour node position.
+  float2       link              = (float2)(0.0f, 0.0f);                        // Neighbour link.
+  float        L                 = 0.0f;                                        // Neighbour link length.
   float        E                 = 0.0f;                                        // Energy function.
   float        En                = 0.0f;                                        // Energy of central node.
   float        theta_rand        = 0.0f;                                        // Flat random theta.
   float        threshold_rand    = 0.0f;                                        // Flat random threshold.
-  float        T                 = temperature[0];                              // Temperature.
-  float        alpha             = radial_exponent[0];                          // Radial exponent.
   float        D                 = 0.0f;                                        // Distributed random z-spin.
-  uint         m_max             = max_rejections[0];                           // Maximum allowed number of rejections.
-  float4       c                 = color[n];                                    // Node color.
  
   // COMPUTING STRIDE MINIMUM INDEX:
   if (i == 0)
@@ -95,9 +91,9 @@ __kernel void thekernel(__global float4*    color,                              
     // COMPUTING ENERGY:
     for (j = j_min; j < j_max; j++)
     {
-      k = nearest[j];                                                           // Computing neighbour index...
-      neighbour = position[k];                                                  // Getting neighbour position...
-      link = neighbour.xy - p.xy;                                               // Getting neighbour link vector...
+      k = neighbour[j];                                                         // Computing neighbour index...
+      node = position[k];                                                       // Getting neighbour position...
+      link = node.xy - p.xy;                                                    // Getting neighbour link vector...
       L = length(link);                                                         // Computing neighbour link length...
 
       if (L == (2.0f + ds))
@@ -118,6 +114,18 @@ __kernel void thekernel(__global float4*    color,                              
     m++;                                                                        // Updating rejection index...
   }
   while ((threshold_rand > D) && (m < m_max));                                  // Evaluating new z-spin candidate (discarding if not found before m_max iterations)...
+
+  // EVALUATING REJECTION SAMPLING RESULT:
+  if(m < m_max)
+  {
+    theta_int[n] = theta_rand;                                                  // Setting new theta (intermediate value)...
+    m_overflow[n] = 0;                                                          // Resetting rejection sampling overflow...
+  }
+  else
+  {
+    theta_int[n] = theta[n];                                                    // Keeping current theta (intermediate value)...
+    m_overflow[n] = 1;                                                          // Setting rejection sampling overflow...
+  }
 
   theta_int[n] = theta_rand;                                                    // Setting new z-spin (intermediate value)...
   state_theta[n] = convert_int4(st_theta);                                      // Updating random generator state...
