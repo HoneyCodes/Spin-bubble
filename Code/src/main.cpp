@@ -378,6 +378,7 @@ int main ()
     hud->input ("Transverse magnetic field:         ", "[T]   ", "Hz", &Hz);
     hud->input ("Maximum rejections:                ", "[]    ", "m_max", &m_max);                  // Maximum rejections...
 
+    // test
     if(hud->button ("[U]pdate", 100) || gl->key_U)
     {
       // UPDATING PHYSICAL PARAMETERS:
