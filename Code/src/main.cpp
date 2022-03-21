@@ -26,9 +26,9 @@
 #define M_MAX              1000                                                                     // Maximum allowed number of rejections.
 #define HX_INIT            0.8f                                                                     // Longitudinal magnetic field.
 #define HZ_INIT            0.01f                                                                    // Transverse magnetic field.
-#define T_INIT             0.0125f                                                                  // Temperature.
+#define T_INIT             0.1f                                                                     // Temperature.
 #define ALPHA_INIT         1.0f                                                                     // Radial exponent.
-#define THETA_INIT         1.5f*M_PI                                                                // Theta angle.
+#define THETA_INIT         M_PI                                                                     // Theta angle.
 #define DATA_POINTS        100                                                                      // Data points for energy profile.
 
 #ifdef __linux__
