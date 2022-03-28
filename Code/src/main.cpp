@@ -38,6 +38,7 @@
   #define GMSH_HOME        "../../Code/mesh/"                                                        // Linux GMSH mesh directory.
   #define LOG_HOME         "../../log/"                                                              // Linux log directory.
   #define DOWNLOAD_HOME    "../../log/"                                                              // Linux log directory.
+  #define UPLOAD_HOME      "../../log/"                                                              // Linux log directory.
 #endif
 
 #ifdef WIN32
@@ -46,6 +47,7 @@
   #define GMSH_HOME        "..\\..\\Code\\mesh\\"                                                    // Windows GMSH mesh directory.
   #define LOG_HOME         "..\\..\\log\\"                                                           // Windows log directory.
   #define DOWNLOAD_HOME    "..\\..\\log\\"                                                           // Windows log directory.
+  #define UPLOAD_HOME      "..\\..\\log\\"                                                           // Windows log directory.
 #endif
 
 #define SHADER_VERT        "voxel_vertex.vert"                                                       // OpenGL vertex shader.
@@ -66,6 +68,10 @@
 #define DOWNLOAD_HEADER    "Spin bubble."                                                            // Download file header.
 #define DOWNLOAD_EXTENSION "dat"                                                                     // Download file extension.
 #define DOWNLOAD           DOWNLOAD_HOME DOWNLOAD_FILE                                               // Download file name (full name, timestamp and extension to be added).
+#define UPLOAD_FILE        "Upload"                                                                  // Upload file name.
+#define UPLOAD_HEADER      "Spin bubble."                                                            // Upload file header.
+#define UPLOAD_EXTENSION   "dat"                                                                     // Upload file extension.
+#define UPLOAD             UPLOAD_HOME UPLOAD_FILE                                                   // Upload file name (full name, timestamp and extension to be added).
 
 // INCLUDES:
 #include "nu.hpp"                                                                                    // Neutrino's header file.
@@ -173,6 +179,11 @@ int main ()
 
   // DATA DOWNLOAD:
   nu::logfile*        download      = new nu::logfile ();                                            // Download file.
+
+  // DATA UPLOAD;
+  nu::logfile*        upload        = new nu::logfile ();                                            // Upload file.
+  std::vector<int>    test_A;
+  std::vector<float>  test_B;
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////// DATA INITIALIZATION //////////////////////////////////////
@@ -333,7 +344,7 @@ int main ()
   trial_index = 0;                                                                                   // Resetting trial index...
   trial_text  = std::string ("_#") + std::to_string (trial_index);                                   // Updating trial text...
   trials      = TRIALS_INIT;                                                                         // Setting auto-trial number...
-  log->open (LOG + timestamp, LOG_EXTENSION, LOG_HEADER, nu::NO_TIMESTAMP);                          // Opening data log file...
+  log->open (LOG + timestamp, LOG_EXTENSION, LOG_HEADER, nu::WRITE);                                 // Opening data log file...
   log->write ("#time\t");                                                                            // Logging header...
   log->write ("#sz_avg\t");                                                                          // Logging header...
   log->write ("#sz_stderr\t");                                                                       // Logging header...
@@ -459,7 +470,7 @@ int main ()
                       DOWNLOAD + timestamp + trial_text,
                       DOWNLOAD_EXTENSION,
                       DOWNLOAD_HEADER,
-                      nu::NO_TIMESTAMP
+                      nu::WRITE
                      );                                                                              // Opening data log file...
       download->write ("#index\t");                                                                  // Logging header...
       download->write ("#x\t");                                                                      // Logging header...
@@ -479,7 +490,7 @@ int main ()
         download->endline ();                                                                        // Ending log line...
       }
 
-      download->close ();                                                                            // Closing data download file...
+      download->close (nu::WRITE);                                                                   // Closing data download file...
 
       // Resetting theta for all nodes:
       for(i = 0; i < nodes; i++)
@@ -529,7 +540,7 @@ int main ()
                         DOWNLOAD + timestamp,
                         DOWNLOAD_EXTENSION,
                         DOWNLOAD_HEADER,
-                        nu::NO_TIMESTAMP
+                        nu::WRITE
                        );                                                                            // Opening data log file...
         download->write ("#index\t");                                                                // Logging header...
         download->write ("#x\t");                                                                    // Logging header...
@@ -550,7 +561,25 @@ int main ()
           download->endline ();                                                                      // Ending log line...
         }
 
-        download->close ();                                                                          // Closing data download file...
+        download->close (nu::WRITE);                                                                 // Closing data download file...
+
+        upload->open (
+                      UPLOAD,
+                      UPLOAD_EXTENSION,
+                      UPLOAD_HEADER,
+                      nu::READ
+                     );                                                                              // Opening data log file...
+        upload->read (&test_A, &test_B);
+        upload->close (nu::READ);
+
+        std::cout << test_A.size () << std::endl;
+        std::cout << test_B.size () << std::endl;
+
+        for(i = 0; i < test_A.size (); i++)
+        {
+          std::cout << test_A[i] << std::endl;
+          std::cout << test_B[i] << std::endl;
+        }
       }
     }
 
@@ -565,7 +594,7 @@ int main ()
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////// CLOSING DATA LOG FILE //////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////
-  log->close ();                                                                                     // Closing data log file...
+  log->close (nu::WRITE);                                                                            // Closing data log file...
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   /////////////////////////////////////////////// CLEANUP ////////////////////////////////////////////
