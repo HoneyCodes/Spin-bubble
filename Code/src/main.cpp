@@ -536,12 +536,7 @@ int main ()
         // Downloading data:
         cl->read (5);                                                                                // Reading theta...
 
-        download->open (
-                        DOWNLOAD + timestamp,
-                        DOWNLOAD_EXTENSION,
-                        DOWNLOAD_HEADER,
-                        nu::WRITE
-                       );                                                                            // Opening data log file...
+        download->open (DOWNLOAD + timestamp, DOWNLOAD_EXTENSION, DOWNLOAD_HEADER, nu::WRITE);       // Opening data log file...
         download->write ("#index\t");                                                                // Logging header...
         download->write ("#x\t");                                                                    // Logging header...
         download->write ("#y\t");                                                                    // Logging header...
@@ -563,17 +558,19 @@ int main ()
 
         download->close (nu::WRITE);                                                                 // Closing data download file...
 
-        upload->open (
-                      UPLOAD,
-                      UPLOAD_EXTENSION,
-                      UPLOAD_HEADER,
-                      nu::READ
-                     );                                                                              // Opening data log file...
-        upload->read (&test_A, &test_B);
+        std::cout << UPLOAD << std::endl;
+
+        upload->open (UPLOAD, UPLOAD_EXTENSION, UPLOAD_HEADER, nu::READ);                            // Opening data log file...
+
+        for(i = 0; i < 5; i++)
+        {
+          upload->read (&test_A, &test_B);
+        }
+
         upload->close (nu::READ);
 
-        std::cout << test_A.size () << std::endl;
-        std::cout << test_B.size () << std::endl;
+        //std::cout << test_A.size () << std::endl;
+        //std::cout << test_B.size () << std::endl;
 
         for(i = 0; i < test_A.size (); i++)
         {
