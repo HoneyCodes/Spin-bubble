@@ -562,20 +562,16 @@ int main ()
 
         upload->open (UPLOAD, UPLOAD_EXTENSION, UPLOAD_HEADER, nu::READ);                            // Opening data log file...
 
-        while(upload->read (&test_A, &test_B))
+        while(!upload->eof ())
         {
-
+          upload->read (&test_A, &test_B);
         }
 
         upload->close (nu::READ);
 
-        //std::cout << test_A.size () << std::endl;
-        //std::cout << test_B.size () << std::endl;
-
         for(i = 0; i < test_A.size (); i++)
         {
-          std::cout << test_A[i] << std::endl;
-          std::cout << test_B[i] << std::endl;
+          std::cout << test_A[i] << " " << test_B[i] << std::endl;
         }
       }
     }
