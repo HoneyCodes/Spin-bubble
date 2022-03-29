@@ -562,9 +562,9 @@ int main ()
 
         upload->open (UPLOAD, UPLOAD_EXTENSION, UPLOAD_HEADER, nu::READ);                            // Opening data log file...
 
-        for(i = 0; i < 5; i++)
+        while(upload->read (&test_A, &test_B))
         {
-          upload->read (&test_A, &test_B);
+
         }
 
         upload->close (nu::READ);
