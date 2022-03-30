@@ -182,8 +182,10 @@ int main ()
 
   // DATA UPLOAD;
   nu::logfile*        upload        = new nu::logfile ();                                            // Upload file.
-  std::vector<int>    test_A;
-  std::vector<float>  test_B;
+  std::vector<int>    upload_i;
+  std::vector<float>  upload_x;
+  std::vector<float>  upload_y;
+  std::vector<float>  upload_theta;
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////
   ///////////////////////////////////////// DATA INITIALIZATION //////////////////////////////////////
@@ -548,22 +550,37 @@ int main ()
         }
 
         download->close (nu::WRITE);                                                                 // Closing data download file...
+      }
 
-        std::cout << UPLOAD << std::endl;
+      hud->space (50);                                                                               // Adding space...
 
+      if(hud->button ("[U]pload", 100) || gl->key_D)
+      {
         upload->open (UPLOAD, UPLOAD_EXTENSION, UPLOAD_HEADER, "\t", nu::READ);                      // Opening data log file...
 
         while(!upload->eof ())
         {
-          upload->read (&test_A, &test_B);
+          upload->read (&upload_i, &upload_x, &upload_y, &upload_theta);
         }
 
         upload->close (nu::READ);
 
-        for(i = 0; i < test_A.size (); i++)
+        // Setting theta for all nodes:
+        for(i = 0; i < nodes; i++)
         {
-          std::cout << test_A[i] << " " << test_B[i] << std::endl;
+          theta->data[i]     = upload_theta[i];                                                      // Setting initial theta...
+          theta_int->data[i] = upload_theta[i];                                                      // Setting initial theta (intermediate value)...
         }
+
+        cl->write (5);                                                                               // Updating theta...
+        cl->write (6);                                                                               // Updating theta (intermediate)...
+        cl->acquire ();                                                                              // Acquiring OpenCL kernel...
+        cl->execute (K2, nu::WAIT);                                                                  // Executing OpenCL kernel...
+        cl->release ();                                                                              // Releasing OpenCL kernel...
+        trial_index++;                                                                               // Updating trial_index...
+        trial_text = std::string ("_#") + std::to_string (trial_index);                              // Updating trial text...
+        time_index = 0;                                                                              // Resetting time_index...
+        savedata   = false;                                                                          // Resetting savedata flag...
       }
     }
 
@@ -602,6 +619,8 @@ int main ()
   delete K3;                                                                                         // Deleting OpenCL kernel...
   delete vacuum;                                                                                     // Deleting vacuum mesh...
   delete log;                                                                                        // Deleting log file object...
+  delete download;                                                                                   // Deleting log file object...
+  delete upload;                                                                                     // Deleting log file object...
 
   return 0;
 }
