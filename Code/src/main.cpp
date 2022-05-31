@@ -447,6 +447,19 @@ int main ()
       {
         upload_theta[i] = theta_start;                                                               // Setting initial theta...
       }
+
+      // UPDATING ENERGY PROFILE:
+      data_theta         = 0.0f;
+
+      for(i = 0; i < DATA_POINTS; i++)
+      {
+        data_x[i]   = (data_theta);
+        data_V      = -(alpha*sin (data_theta)*sin (data_theta)) -
+                      (Hx*cos (data_theta) + Hz*sin (data_theta));
+
+        data_y[i]   = data_V;
+        data_theta += 2.0f*M_PI/(DATA_POINTS - 1);
+      }
     }
 
     hud->finish ();                                                                                  // Finishing window...
